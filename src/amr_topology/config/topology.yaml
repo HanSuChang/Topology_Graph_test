@@ -4,12 +4,18 @@ nodes:
   loading:
     x: 2.4713807106018066
     y: -2.628671169281006
-    yaw: 0.0
+    yaw: 1.57
     type: loading_zone
 
   intersection_1:
     x: 2.442805051803589
     y: -0.015692830085754395
+    yaw: 0.0
+    type: intersection
+
+  intersection_2:
+    x: 2.530884265899658
+    y: -1.0011707544326782
     yaw: 0.0
     type: intersection
 
@@ -31,21 +37,33 @@ nodes:
     yaw: 0.0
     type: stationing_slot
 
+  a_leader_slot_precision:
+    x: 0.5229313969612122
+    y: 0.2872968912124634
+    yaw: 0.0
+    type: stationing_slot_precision
+
   b_leader_slot:
     x: 0.005939602851867676
     y: -1.005650281906128
     yaw: 0.0
     type: stationing_slot
 
+  b_leader_slot_precision:
+    x: 0.5868964791297913
+    y: -0.6470909118652344
+    yaw: 0.0
+    type: stationing_slot_precision
+
   charger_front:
     x: 0.10498535633087158
     y: -2.760960578918457
-    yaw: 0.0
+    yaw: 1.57
     type: charger
 
   charger_entry:
-    x: 0.14896941184997559
-    y: -1.9904364347457886
+    x: 0.2130746841430664
+    y: -2.053251266479492
     yaw: 0.0
     type: charger_entry
 
@@ -61,8 +79,18 @@ edges:
     bidirectional: true
     speed_limit: 0.18
 
+  - from: loading
+    to: intersection_2
+    bidirectional: true
+    speed_limit: 0.18
+
   - from: intersection_1
     to: a_entry
+    bidirectional: true
+    speed_limit: 0.18
+
+  - from: intersection_2
+    to: b_entry
     bidirectional: true
     speed_limit: 0.18
 
