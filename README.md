@@ -345,7 +345,8 @@ ros2 run tf2_ros tf2_echo map base_footprint
 [State 1: 상차 단계 (Loading)] 
 ➔ 복귀/상차 구역 정차 상태. 바구니가 없는 터틀봇이 로봇팔을 구동하여 바구니가 장착된 RC 1, 2호기에 순차 상차 완료.
 ➔ 미션 큐에서 첫 번째 목적지 [A공간] 로드 후 State 2 전환. 
-                                                              ▼ 
+                                                              
+                                                               ▼ 
                                                               
 [State 2: 군집 주행 단계 (Formation Driving)] 
 ➔ 터틀봇 앞장서서 안내 주행 (Dijkstra + Spline + MPC). 
