@@ -28,8 +28,13 @@ ament_target_dependencies(
 )
 target_link_libraries(topology_follower yaml-cpp)
 
-add_executable(mission_loop src/mission_loop.cpp)
+add_executable(
+  mission_loop
+  src/mission_loop.cpp
+  src/obstacle_avoidance.cpp
+)
 target_compile_features(mission_loop PUBLIC cxx_std_17)
+target_include_directories(mission_loop PUBLIC include)
 ament_target_dependencies(
   mission_loop
   ament_index_cpp

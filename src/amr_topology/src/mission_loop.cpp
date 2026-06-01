@@ -21,55 +21,17 @@
 #include <tf2_ros/transform_listener.h>
 #include <yaml-cpp/yaml.h>
 
+#include "amr_topology/obstacle_avoidance.hpp"
+
 using namespace std::chrono_literals;
-
-struct MissionNode
-{
-  double x{0.0};
-  double y{0.0};
-  double yaw{0.0};
-};
-
-struct RobotPose2D
-{
-  double x{0.0};
-  double y{0.0};
-  double yaw{0.0};
-};
-
-struct ScanPoint2D
-{
-  double x{0.0};
-  double y{0.0};
-};
-
-double normalize_angle(double angle)
-{
-  while (angle > M_PI) {
-    angle -= 2.0 * M_PI;
-  }
-  while (angle < -M_PI) {
-    angle += 2.0 * M_PI;
-  }
-  return angle;
-}
-
-bool angle_in_sector(double angle, double center, double width)
-{
-  return std::abs(normalize_angle(angle - center)) <= width * 0.5;
-}
-
-double clamp(double value, double lower, double upper)
-{
-  return std::max(lower, std::min(upper, value));
-}
-
-double yaw_from_quaternion(const geometry_msgs::msg::Quaternion & q)
-{
-  const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
-  const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-  return std::atan2(siny_cosp, cosy_cosp);
-}
+using amr_topology::angle_in_sector;
+using amr_topology::clamp;
+using amr_topology::DwaPlannerConfig;
+using amr_topology::MissionNode;
+using amr_topology::normalize_angle;
+using amr_topology::RobotPose2D;
+using amr_topology::ScanPoint2D;
+using amr_topology::yaw_from_quaternion;
 
 class MissionLoop : public rclcpp::Node
 {
@@ -103,11 +65,11 @@ public:
     this->declare_parameter<double>("curve_min_linear_speed", 0.03);
     this->declare_parameter<double>("slot_departure_linear_speed", 0.065);
     this->declare_parameter<bool>("enable_lidar_safety", true);
-    this->declare_parameter<double>("front_emergency_stop_distance", 0.60);
-    this->declare_parameter<double>("front_stop_distance", 0.70);
+    this->declare_parameter<double>("front_emergency_stop_distance", 0.54);
+    this->declare_parameter<double>("front_stop_distance", 0.60);
     this->declare_parameter<double>("front_clear_distance", 0.90);
     this->declare_parameter<double>("forward_collision_sector_angle", M_PI_2);
-    this->declare_parameter<double>("forward_collision_stop_distance", 0.50);
+    this->declare_parameter<double>("forward_collision_stop_distance", 0.46);
     this->declare_parameter<double>("front_sector_angle", 0.70);
     this->declare_parameter<double>("rear_stop_distance", 0.18);
     this->declare_parameter<double>("rear_sector_angle", 0.70);
@@ -128,27 +90,33 @@ public:
     this->declare_parameter<double>("side_sector_angle", 0.70);
     this->declare_parameter<bool>("enable_obstacle_avoidance", true);
     this->declare_parameter<double>("obstacle_wait_seconds", 0.0);
-    this->declare_parameter<int>("obstacle_avoidance_max_attempts", 1);
-    this->declare_parameter<double>("obstacle_avoidance_trigger_distance", 0.75);
+    this->declare_parameter<int>("obstacle_avoidance_max_attempts", 0);
+    this->declare_parameter<double>("obstacle_avoidance_trigger_distance", 0.62);
     this->declare_parameter<double>("dwa_max_duration", 6.0);
-    this->declare_parameter<double>("dwa_min_duration", 1.0);
+    this->declare_parameter<double>("dwa_min_duration", 0.7);
     this->declare_parameter<double>("dwa_sim_time", 3.0);
     this->declare_parameter<double>("dwa_sim_step", 0.10);
-    this->declare_parameter<double>("dwa_min_linear_speed", 0.02);
-    this->declare_parameter<double>("dwa_max_linear_speed", 0.075);
+    this->declare_parameter<double>("dwa_min_linear_speed", 0.04);
+    this->declare_parameter<double>("dwa_max_linear_speed", 0.095);
     this->declare_parameter<double>("dwa_max_angular_speed", 0.55);
     this->declare_parameter<int>("dwa_linear_samples", 4);
     this->declare_parameter<int>("dwa_angular_samples", 11);
     this->declare_parameter<double>("dwa_robot_radius", 0.18);
     this->declare_parameter<double>("dwa_lidar_x_offset", 0.08);
     this->declare_parameter<double>("dwa_safety_margin", 0.25);
-    this->declare_parameter<double>("dwa_static_map_clearance", 0.24);
+    this->declare_parameter<double>("dwa_static_map_clearance", 0.21);
     this->declare_parameter<double>("dwa_obstacle_range", 1.6);
     this->declare_parameter<double>("dwa_goal_weight", 0.9);
     this->declare_parameter<double>("dwa_clearance_weight", 2.0);
-    this->declare_parameter<double>("dwa_speed_weight", 1.2);
-    this->declare_parameter<double>("dwa_front_clear_hold", 0.8);
+    this->declare_parameter<double>("dwa_speed_weight", 1.8);
+    this->declare_parameter<double>("dwa_front_clear_hold", 0.6);
     this->declare_parameter<double>("dwa_stuck_turn_speed", 0.38);
+    this->declare_parameter<double>("arc_commit_duration", 1.4);
+    this->declare_parameter<double>("dynamic_contact_stop_distance", 0.28);
+    this->declare_parameter<double>("dynamic_contact_escape_distance", 0.22);
+    this->declare_parameter<double>("dynamic_contact_escape_speed", 0.04);
+    this->declare_parameter<double>("dynamic_contact_turn_hold", 1.8);
+    this->declare_parameter<double>("dynamic_path_min_clearance", 0.36);
     this->declare_parameter<bool>("ignore_mapped_front_obstacles", true);
     this->declare_parameter<double>("map_obstacle_padding", 0.08);
     this->declare_parameter<int>("map_occupied_threshold", 50);
@@ -223,10 +191,22 @@ public:
     dwa_speed_weight_ = this->get_parameter("dwa_speed_weight").as_double();
     dwa_front_clear_hold_ = this->get_parameter("dwa_front_clear_hold").as_double();
     dwa_stuck_turn_speed_ = this->get_parameter("dwa_stuck_turn_speed").as_double();
+    arc_commit_duration_ = this->get_parameter("arc_commit_duration").as_double();
+    dynamic_contact_stop_distance_ =
+      this->get_parameter("dynamic_contact_stop_distance").as_double();
+    dynamic_contact_escape_distance_ =
+      this->get_parameter("dynamic_contact_escape_distance").as_double();
+    dynamic_contact_escape_speed_ =
+      this->get_parameter("dynamic_contact_escape_speed").as_double();
+    dynamic_contact_turn_hold_ =
+      this->get_parameter("dynamic_contact_turn_hold").as_double();
+    dynamic_path_min_clearance_ =
+      this->get_parameter("dynamic_path_min_clearance").as_double();
     ignore_mapped_front_obstacles_ =
       this->get_parameter("ignore_mapped_front_obstacles").as_bool();
     map_obstacle_padding_ = this->get_parameter("map_obstacle_padding").as_double();
     map_occupied_threshold_ = this->get_parameter("map_occupied_threshold").as_int();
+    update_dwa_planner_config();
 
     load_topology();
 
@@ -274,6 +254,13 @@ public:
   }
 
 private:
+  struct DynamicObstacleRisk
+  {
+    double x{0.0};
+    double y{0.0};
+    double distance{std::numeric_limits<double>::infinity()};
+  };
+
   void go_path(const std::vector<std::string> & path)
   {
     if (path.empty()) {
@@ -299,17 +286,16 @@ private:
       const auto & target = nodes_.at(target_name);
       const double distance = distance_to_target(pose.value(), target);
       const double tolerance = is_final ? goal_tolerance_ : waypoint_tolerance_;
-
-      if (distance <= tolerance) {
-        if (is_final) {
-          stop();
-          if (target_name != "charger_entry") {
-            rotate_to_node_yaw(target_name);
-          }
-          RCLCPP_INFO(this->get_logger(), "Reached %s", target_name.c_str());
-          return;
+      if (is_final && distance <= tolerance) {
+        stop();
+        if (target_name != "charger_entry") {
+          rotate_to_node_yaw(target_name);
         }
+        RCLCPP_INFO(this->get_logger(), "Reached %s", target_name.c_str());
+        return;
+      }
 
+      if (!is_final && distance <= tolerance) {
         RCLCPP_INFO(this->get_logger(), "Passed waypoint %s", target_name.c_str());
         ++target_index;
         avoidance_attempts = 0;
@@ -318,10 +304,19 @@ private:
 
       const bool leaving_leader_slot =
         is_leader_slot(source_name) && is_entry_node(target_name);
+      auto command = leaving_leader_slot ?
+        make_slot_departure_command() :
+        make_drive_command(pose.value(), target, is_final);
+      const bool route_obstructed =
+        !leaving_leader_slot &&
+        (is_front_obstructed() || is_drive_path_obstructed(command));
 
-      if (!leaving_leader_slot && is_front_obstructed()) {
+      if (route_obstructed) {
         stop();
-        if (avoidance_attempts >= obstacle_avoidance_max_attempts_) {
+        if (
+          obstacle_avoidance_max_attempts_ > 0 &&
+          avoidance_attempts >= obstacle_avoidance_max_attempts_)
+        {
           RCLCPP_WARN_THROTTLE(
             this->get_logger(), *this->get_clock(), 2000,
             "Front obstacle still blocks the route after %d avoidance attempt(s). Waiting for it to clear.",
@@ -333,14 +328,15 @@ private:
           blocked_since = this->now();
           RCLCPP_WARN(
             this->get_logger(),
-            "Front obstacle detected. Waiting %.1f seconds before avoidance.",
+            "Obstacle on route detected. Waiting %.1f seconds before avoidance.",
             obstacle_wait_seconds_);
         }
         if ((this->now() - blocked_since.value()).seconds() >= obstacle_wait_seconds_) {
           if (try_avoid_front_obstacle(avoidance_attempts + 1, target)) {
-            ++avoidance_attempts;
+            avoidance_attempts = 0;
             blocked_since.reset();
           } else {
+            ++avoidance_attempts;
             RCLCPP_WARN_THROTTLE(
               this->get_logger(), *this->get_clock(), 2000,
               "Obstacle avoidance unavailable. Waiting for obstacle to clear.");
@@ -350,15 +346,16 @@ private:
         continue;
       }
 
-      if ((blocked_since.has_value() || avoidance_attempts > 0) && is_front_clear()) {
-        RCLCPP_INFO(this->get_logger(), "Front obstacle cleared. Resuming mission path.");
+      if (
+        (blocked_since.has_value() || avoidance_attempts > 0) &&
+        is_front_clear() &&
+        !is_drive_path_obstructed(command))
+      {
+        RCLCPP_INFO(this->get_logger(), "Obstacle route cleared. Resuming mission path.");
         blocked_since.reset();
         avoidance_attempts = 0;
       }
-      auto command = leaving_leader_slot ?
-        make_slot_departure_command() :
-        make_drive_command(pose.value(), target, is_final);
-      cmd_pub_->publish(apply_lidar_safety(command));
+      cmd_pub_->publish(apply_navigation_safety(command, pose.value()));
       rate.sleep();
     }
   }
@@ -366,7 +363,7 @@ private:
   geometry_msgs::msg::Twist make_drive_command(
     const RobotPose2D & pose,
     const MissionNode & target,
-    bool is_final)
+    bool is_final) const
   {
     const double dx = target.x - pose.x;
     const double dy = target.y - pose.y;
@@ -722,6 +719,30 @@ private:
     return 1;
   }
 
+  void update_dwa_planner_config()
+  {
+    DwaPlannerConfig config;
+    config.min_linear_speed = dwa_min_linear_speed_;
+    config.max_linear_speed = dwa_max_linear_speed_;
+    config.max_angular_speed = dwa_max_angular_speed_;
+    config.linear_samples = dwa_linear_samples_;
+    config.angular_samples = dwa_angular_samples_;
+    config.robot_radius = dwa_robot_radius_;
+    config.safety_margin = dwa_safety_margin_;
+    config.static_map_clearance = dwa_static_map_clearance_;
+    config.obstacle_range = dwa_obstacle_range_;
+    config.goal_weight = dwa_goal_weight_;
+    config.clearance_weight = dwa_clearance_weight_;
+    config.speed_weight = dwa_speed_weight_;
+    config.sim_time = dwa_sim_time_;
+    config.sim_step = dwa_sim_step_;
+    config.front_clear_distance = front_clear_distance_;
+    config.front_stop_distance = front_stop_distance_;
+    config.stuck_turn_speed = dwa_stuck_turn_speed_;
+    config.arc_commit_duration = arc_commit_duration_;
+    dwa_planner_.set_config(config);
+  }
+
   bool is_front_blocked() const
   {
     return enable_lidar_safety_ &&
@@ -883,16 +904,7 @@ private:
 
   int choose_avoidance_turn_sign() const
   {
-    if (std::isfinite(left_avg_range_) && std::isfinite(right_avg_range_)) {
-      return left_avg_range_ >= right_avg_range_ ? 1 : -1;
-    }
-    if (std::isfinite(left_avg_range_)) {
-      return 1;
-    }
-    if (std::isfinite(right_avg_range_)) {
-      return -1;
-    }
-    return 1;
+    return dwa_planner_.choose_turn_sign(left_avg_range_, right_avg_range_);
   }
 
   std::optional<geometry_msgs::msg::Twist> plan_dwa_command(
@@ -900,145 +912,40 @@ private:
     const MissionNode & target,
     int preferred_turn_sign) const
   {
-    const int linear_samples = std::max(1, dwa_linear_samples_);
-    const int angular_samples = std::max(1, dwa_angular_samples_);
-    const double dt = std::max(0.02, dwa_sim_step_);
-    const double obstacle_limit = dwa_safety_margin_;
-    const double cos_yaw = std::cos(pose.yaw);
-    const double sin_yaw = std::sin(pose.yaw);
-    const double front_pressure = front_min_range_;
-    const bool needs_escape_turn =
-      std::isfinite(front_pressure) && front_pressure < front_clear_distance_;
-    const double straight_deadband = 0.08;
-
-    std::optional<geometry_msgs::msg::Twist> best_command;
-    double best_score = -std::numeric_limits<double>::infinity();
-
-    for (int linear_index = 0; linear_index < linear_samples; ++linear_index) {
-      const double linear_ratio = linear_samples == 1 ? 0.0 :
-        static_cast<double>(linear_index) / static_cast<double>(linear_samples - 1);
-      const double linear =
-        dwa_min_linear_speed_ +
-        (dwa_max_linear_speed_ - dwa_min_linear_speed_) * linear_ratio;
-
-      for (int angular_index = 0; angular_index < angular_samples; ++angular_index) {
-        const double angular_ratio = angular_samples == 1 ? 0.5 :
-          static_cast<double>(angular_index) / static_cast<double>(angular_samples - 1);
-        const double angular =
-          -dwa_max_angular_speed_ + 2.0 * dwa_max_angular_speed_ * angular_ratio;
-
-        if (preferred_turn_sign != 0 && angular * preferred_turn_sign < 0.0) {
-          continue;
-        }
-        if (needs_escape_turn && linear > 0.0 && std::abs(angular) < straight_deadband) {
-          continue;
-        }
-        double sim_x = 0.0;
-        double sim_y = 0.0;
-        double sim_yaw = 0.0;
-        double min_clearance = std::numeric_limits<double>::infinity();
-        bool collision = false;
-
-        for (double time = 0.0; time <= dwa_sim_time_; time += dt) {
-          sim_x += linear * std::cos(sim_yaw) * dt;
-          sim_y += linear * std::sin(sim_yaw) * dt;
-          sim_yaw = normalize_angle(sim_yaw + angular * dt);
-
-          const double sim_map_x = pose.x + cos_yaw * sim_x - sin_yaw * sim_y;
-          const double sim_map_y = pose.y + sin_yaw * sim_x + cos_yaw * sim_y;
-          if (is_static_map_collision(sim_map_x, sim_map_y, dwa_static_map_clearance_)) {
-            collision = true;
-            break;
-          }
-
-          for (const auto & point : scan_points_) {
-            const double clearance = std::hypot(point.x - sim_x, point.y - sim_y) -
-              dwa_robot_radius_;
-            min_clearance = std::min(min_clearance, clearance);
-            if (clearance <= obstacle_limit) {
-              collision = true;
-              break;
-            }
-          }
-
-          if (collision) {
-            break;
-          }
-        }
-
-        if (collision) {
-          continue;
-        }
-
-        const double end_x = pose.x + cos_yaw * sim_x - sin_yaw * sim_y;
-        const double end_y = pose.y + sin_yaw * sim_x + cos_yaw * sim_y;
-        const double end_yaw = normalize_angle(pose.yaw + sim_yaw);
-        const double goal_distance = std::hypot(target.x - end_x, target.y - end_y);
-        const double goal_heading = std::atan2(target.y - end_y, target.x - end_x);
-        const double heading_error = std::abs(normalize_angle(goal_heading - end_yaw));
-        const double clearance_score = std::min(min_clearance, dwa_obstacle_range_);
-        const double escape_turn_score = needs_escape_turn && dwa_max_angular_speed_ > 0.0 ?
-          std::min(1.0, std::abs(angular) / dwa_max_angular_speed_) : 0.0;
-        const double stationary_penalty = linear <= 0.001 ? 0.08 : 0.0;
-        const double score =
-          -dwa_goal_weight_ * goal_distance -
-          0.35 * heading_error +
-          dwa_clearance_weight_ * clearance_score +
-          dwa_speed_weight_ * linear +
-          0.75 * escape_turn_score -
-          stationary_penalty;
-
-        if (score > best_score) {
-          geometry_msgs::msg::Twist command;
-          command.linear.x = linear;
-          command.angular.z = angular;
-          best_command = command;
-          best_score = score;
-        }
-      }
-    }
-
-    return best_command;
+    return dwa_planner_.plan_command(
+      pose,
+      target,
+      preferred_turn_sign,
+      scan_points_,
+      front_min_range_,
+      [this](double x, double y, double clearance) {
+        return is_static_map_collision(x, y, clearance);
+      });
   }
 
-  geometry_msgs::msg::Twist make_dwa_turn_in_place_command(int turn_sign = 0) const
+  geometry_msgs::msg::Twist make_immediate_escape_command(
+    int turn_sign,
+    const RobotPose2D & pose,
+    const MissionNode & target) const
   {
-    geometry_msgs::msg::Twist command;
-    if (turn_sign != 0) {
-      command.angular.z = turn_sign > 0 ? dwa_stuck_turn_speed_ : -dwa_stuck_turn_speed_;
-    } else if (std::isfinite(left_avg_range_) && std::isfinite(right_avg_range_)) {
-      command.angular.z = left_avg_range_ >= right_avg_range_ ?
-        dwa_stuck_turn_speed_ : -dwa_stuck_turn_speed_;
-    } else if (std::isfinite(left_avg_range_)) {
-      command.angular.z = dwa_stuck_turn_speed_;
-    } else if (std::isfinite(right_avg_range_)) {
-      command.angular.z = -dwa_stuck_turn_speed_;
-    } else {
-      command.angular.z = dwa_stuck_turn_speed_;
-    }
-    return command;
+    return dwa_planner_.make_immediate_escape_command(
+      turn_sign,
+      pose,
+      target,
+      front_min_range_,
+      is_forward_collision_blocked(),
+      is_front_emergency_blocked());
   }
 
-  geometry_msgs::msg::Twist make_immediate_escape_command(int turn_sign) const
+  bool can_resume_mission_drive(const RobotPose2D & pose, const MissionNode & target) const
   {
-    auto command = make_dwa_turn_in_place_command(turn_sign);
-    const double front_pressure = front_min_range_;
-    const bool has_room_for_arc =
-      std::isfinite(front_pressure) &&
-      front_pressure > front_stop_distance_ + 0.08 &&
-      !is_forward_collision_blocked() &&
-      !is_front_emergency_blocked();
+    const auto next_drive_command = make_drive_command(pose, target, false);
 
-    if (has_room_for_arc) {
-      command.linear.x = std::min(0.05, dwa_max_linear_speed_);
-    }
-    return command;
-  }
-
-  bool can_resume_mission_drive(const RobotPose2D & pose) const
-  {
     return is_front_clear() &&
       !is_static_map_collision(pose.x, pose.y, dwa_static_map_clearance_) &&
+      !will_hit_static_map(pose, next_drive_command, 1.2) &&
+      !will_hit_dynamic_obstacle(next_drive_command, 1.5, dynamic_path_min_clearance_) &&
+      !closest_dynamic_contact_risk().has_value() &&
       !is_front_emergency_blocked() &&
       !is_forward_collision_blocked();
   }
@@ -1060,6 +967,8 @@ private:
     const auto start_time = this->now();
     const int turn_sign = choose_avoidance_turn_sign();
     std::optional<rclcpp::Time> front_clear_since;
+    std::optional<geometry_msgs::msg::Twist> committed_arc;
+    std::optional<rclcpp::Time> committed_arc_until;
     rclcpp::Rate rate(20.0);
 
     while (rclcpp::ok() && this->now() < end_time) {
@@ -1072,11 +981,10 @@ private:
 
       const bool min_duration_passed =
         (this->now() - start_time).seconds() >= dwa_min_duration_;
-      if (min_duration_passed && can_resume_mission_drive(pose.value())) {
+      if (min_duration_passed && can_resume_mission_drive(pose.value(), target)) {
         if (!front_clear_since.has_value()) {
           front_clear_since = this->now();
         } else if ((this->now() - front_clear_since.value()).seconds() >= dwa_front_clear_hold_) {
-          stop();
           RCLCPP_INFO(this->get_logger(), "DWA avoidance cleared the front path.");
           return true;
         }
@@ -1084,9 +992,18 @@ private:
         front_clear_since.reset();
       }
 
-      auto command =
-        plan_dwa_command(pose.value(), target, turn_sign).value_or(
-        make_immediate_escape_command(turn_sign));
+      if (
+        !committed_arc.has_value() ||
+        !committed_arc_until.has_value() ||
+        this->now() >= committed_arc_until.value())
+      {
+        committed_arc = plan_dwa_command(pose.value(), target, turn_sign).value_or(
+          make_immediate_escape_command(turn_sign, pose.value(), target));
+        committed_arc_until =
+          this->now() + rclcpp::Duration::from_seconds(arc_commit_duration_);
+      }
+
+      auto command = committed_arc.value();
       cmd_pub_->publish(apply_dwa_lidar_safety(command));
       rate.sleep();
     }
@@ -1278,13 +1195,230 @@ private:
     return command;
   }
 
-  geometry_msgs::msg::Twist apply_dwa_lidar_safety(geometry_msgs::msg::Twist command)
+  bool will_hit_static_map(
+    const RobotPose2D & pose,
+    const geometry_msgs::msg::Twist & command,
+    double horizon) const
   {
-    if (!enable_lidar_safety_ || command.linear.x <= 0.0) {
+    if (command.linear.x <= 0.0 || horizon <= 0.0) {
+      return false;
+    }
+
+    const double dt = 0.10;
+    double sim_x = 0.0;
+    double sim_y = 0.0;
+    double sim_yaw = 0.0;
+    const double cos_yaw = std::cos(pose.yaw);
+    const double sin_yaw = std::sin(pose.yaw);
+
+    for (double time = 0.0; time <= horizon; time += dt) {
+      sim_x += command.linear.x * std::cos(sim_yaw) * dt;
+      sim_y += command.linear.x * std::sin(sim_yaw) * dt;
+      sim_yaw = normalize_angle(sim_yaw + command.angular.z * dt);
+
+      const double map_x = pose.x + cos_yaw * sim_x - sin_yaw * sim_y;
+      const double map_y = pose.y + sin_yaw * sim_x + cos_yaw * sim_y;
+      if (is_static_map_collision(map_x, map_y, dwa_static_map_clearance_)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool will_hit_dynamic_obstacle(
+    const geometry_msgs::msg::Twist & command,
+    double horizon,
+    double min_clearance) const
+  {
+    if (command.linear.x <= 0.0 || horizon <= 0.0 || min_clearance <= 0.0) {
+      return false;
+    }
+
+    const double dt = 0.10;
+    double sim_x = 0.0;
+    double sim_y = 0.0;
+    double sim_yaw = 0.0;
+
+    for (double time = 0.0; time <= horizon; time += dt) {
+      sim_x += command.linear.x * std::cos(sim_yaw) * dt;
+      sim_y += command.linear.x * std::sin(sim_yaw) * dt;
+      sim_yaw = normalize_angle(sim_yaw + command.angular.z * dt);
+
+      for (const auto & point : scan_points_) {
+        if (point.x < -0.18) {
+          continue;
+        }
+        if (std::hypot(point.x - sim_x, point.y - sim_y) <= min_clearance) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool is_drive_path_obstructed(const geometry_msgs::msg::Twist & command) const
+  {
+    return enable_lidar_safety_ &&
+      command.linear.x > 0.0 &&
+      will_hit_dynamic_obstacle(command, 1.0, dynamic_path_min_clearance_);
+  }
+
+  std::optional<DynamicObstacleRisk> closest_dynamic_contact_risk() const
+  {
+    DynamicObstacleRisk closest;
+
+    for (const auto & point : scan_points_) {
+      if (point.x < -0.30 || point.x > 0.42) {
+        continue;
+      }
+
+      const double distance = std::hypot(point.x, point.y);
+      if (distance > dynamic_contact_stop_distance_) {
+        continue;
+      }
+
+      if (distance < closest.distance) {
+        closest.x = point.x;
+        closest.y = point.y;
+        closest.distance = distance;
+      }
+    }
+
+    if (!std::isfinite(closest.distance)) {
+      return std::nullopt;
+    }
+    return closest;
+  }
+
+  int dynamic_contact_escape_turn_sign(const DynamicObstacleRisk & risk) const
+  {
+    if (risk.x > 0.08) {
+      return risk.y >= 0.0 ? -1 : 1;
+    }
+    return risk.y >= 0.0 ? 1 : -1;
+  }
+
+  bool has_front_escape_room() const
+  {
+    const double escape_front_limit = dynamic_contact_escape_distance_ + 0.10;
+    return std::isfinite(front_min_range_) &&
+      front_min_range_ > escape_front_limit &&
+      std::isfinite(forward_collision_min_range_) &&
+      forward_collision_min_range_ > escape_front_limit;
+  }
+
+  geometry_msgs::msg::Twist apply_dynamic_contact_safety(
+    geometry_msgs::msg::Twist command,
+    bool allow_reverse_escape)
+  {
+    const auto risk = closest_dynamic_contact_risk();
+    if (!risk.has_value()) {
+      if (
+        contact_escape_until_.has_value() &&
+        this->now() >= contact_escape_until_.value())
+      {
+        contact_escape_turn_sign_.reset();
+        contact_escape_until_.reset();
+      }
       return command;
     }
 
-    if (is_front_emergency_blocked()) {
+    int turn_sign = dynamic_contact_escape_turn_sign(risk.value());
+    if (
+      contact_escape_turn_sign_.has_value() &&
+      contact_escape_until_.has_value() &&
+      this->now() < contact_escape_until_.value())
+    {
+      turn_sign = contact_escape_turn_sign_.value();
+    } else {
+      contact_escape_turn_sign_ = turn_sign;
+    }
+    contact_escape_until_ =
+      this->now() + rclcpp::Duration::from_seconds(dynamic_contact_turn_hold_);
+
+    if (risk->distance > dynamic_contact_escape_distance_) {
+      if (command.linear.x > 0.0) {
+        command.linear.x = std::min(command.linear.x, 0.05);
+      }
+      command.angular.z = clamp(
+        command.angular.z + static_cast<double>(turn_sign) * 0.12,
+        -max_angular_speed_,
+        max_angular_speed_);
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Dynamic obstacle near x=%.2f y=%.2f d=%.2f. Biasing arc away.",
+        risk->x,
+        risk->y,
+        risk->distance);
+      return command;
+    }
+
+    command.linear.x = 0.0;
+    command.angular.z = static_cast<double>(turn_sign) * std::min(0.22, max_angular_speed_);
+
+    if (
+      allow_reverse_escape &&
+      risk->x > 0.08 &&
+      std::isfinite(rear_min_range_) &&
+      rear_min_range_ > rear_stop_distance_ + 0.08)
+    {
+      command.linear.x = -dynamic_contact_escape_speed_;
+      command.angular.z = static_cast<double>(turn_sign) * 0.12;
+    } else if (
+      allow_reverse_escape &&
+      risk->x <= 0.08 &&
+      has_front_escape_room())
+    {
+      command.linear.x = dynamic_contact_escape_speed_;
+      command.angular.z = static_cast<double>(turn_sign) * 0.10;
+    }
+
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Dynamic obstacle contact risk x=%.2f y=%.2f d=%.2f. Escaping.",
+      risk->x,
+      risk->y,
+      risk->distance);
+    return command;
+  }
+
+  geometry_msgs::msg::Twist apply_navigation_safety(
+    geometry_msgs::msg::Twist command,
+    const RobotPose2D & pose)
+  {
+    command = apply_lidar_safety(command);
+    if (command.linear.x > 0.0) {
+      command = apply_dynamic_contact_safety(command, false);
+    }
+    if (
+      command.linear.x > 0.0 &&
+      will_hit_dynamic_obstacle(command, 1.2, dynamic_path_min_clearance_))
+    {
+      command.linear.x = 0.0;
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Dynamic obstacle on commanded path. Blocking forward motion.");
+    }
+    if (command.linear.x > 0.0 && will_hit_static_map(pose, command, 1.2)) {
+      command.linear.x = 0.0;
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Static map obstacle on commanded path. Blocking forward motion.");
+    }
+    return command;
+  }
+
+  geometry_msgs::msg::Twist apply_dwa_lidar_safety(geometry_msgs::msg::Twist command)
+  {
+    if (!enable_lidar_safety_) {
+      return command;
+    }
+
+    command = apply_dynamic_contact_safety(command, true);
+
+    if (command.linear.x > 0.0 && is_front_emergency_blocked()) {
       command.linear.x = 0.0;
       RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 1000,
@@ -1562,10 +1696,10 @@ private:
   double curve_min_linear_speed_{0.03};
   double slot_departure_linear_speed_{0.065};
   bool enable_lidar_safety_{true};
-  double front_emergency_stop_distance_{0.60};
-  double front_stop_distance_{0.70};
+  double front_emergency_stop_distance_{0.54};
+  double front_stop_distance_{0.60};
   double forward_collision_sector_angle_{M_PI_2};
-  double forward_collision_stop_distance_{0.50};
+  double forward_collision_stop_distance_{0.46};
   double front_sector_angle_{0.70};
   double rear_stop_distance_{0.18};
   double rear_sector_angle_{0.70};
@@ -1587,30 +1721,39 @@ private:
   double side_sector_angle_{0.70};
   bool enable_obstacle_avoidance_{true};
   double obstacle_wait_seconds_{0.0};
-  int obstacle_avoidance_max_attempts_{1};
-  double obstacle_avoidance_trigger_distance_{0.75};
+  int obstacle_avoidance_max_attempts_{0};
+  double obstacle_avoidance_trigger_distance_{0.62};
   double dwa_max_duration_{6.0};
-  double dwa_min_duration_{1.0};
+  double dwa_min_duration_{0.7};
   double dwa_sim_time_{3.0};
   double dwa_sim_step_{0.10};
-  double dwa_min_linear_speed_{0.02};
-  double dwa_max_linear_speed_{0.075};
+  double dwa_min_linear_speed_{0.04};
+  double dwa_max_linear_speed_{0.095};
   double dwa_max_angular_speed_{0.55};
   int dwa_linear_samples_{4};
   int dwa_angular_samples_{11};
   double dwa_robot_radius_{0.18};
   double dwa_lidar_x_offset_{0.08};
   double dwa_safety_margin_{0.25};
-  double dwa_static_map_clearance_{0.24};
+  double dwa_static_map_clearance_{0.21};
   double dwa_obstacle_range_{1.6};
   double dwa_goal_weight_{0.9};
   double dwa_clearance_weight_{2.0};
-  double dwa_speed_weight_{1.2};
-  double dwa_front_clear_hold_{0.8};
+  double dwa_speed_weight_{1.8};
+  double dwa_front_clear_hold_{0.6};
   double dwa_stuck_turn_speed_{0.38};
+  double arc_commit_duration_{1.4};
+  double dynamic_contact_stop_distance_{0.28};
+  double dynamic_contact_escape_distance_{0.22};
+  double dynamic_contact_escape_speed_{0.04};
+  double dynamic_contact_turn_hold_{1.8};
+  double dynamic_path_min_clearance_{0.36};
+  std::optional<int> contact_escape_turn_sign_;
+  std::optional<rclcpp::Time> contact_escape_until_;
   bool ignore_mapped_front_obstacles_{true};
   double map_obstacle_padding_{0.08};
   int map_occupied_threshold_{50};
+  amr_topology::DwaPlanner dwa_planner_;
   double raw_front_min_range_{std::numeric_limits<double>::infinity()};
   double raw_forward_collision_min_range_{std::numeric_limits<double>::infinity()};
   double front_min_range_{std::numeric_limits<double>::infinity()};
