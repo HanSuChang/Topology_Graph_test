@@ -8,10 +8,12 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <std_msgs/msg/string.hpp>
@@ -35,6 +37,12 @@ struct RobotPose2D
   double yaw{0.0};
 };
 
+struct ScanPoint2D
+{
+  double x{0.0};
+  double y{0.0};
+};
+
 double normalize_angle(double angle)
 {
   while (angle > M_PI) {
@@ -44,6 +52,11 @@ double normalize_angle(double angle)
     angle += 2.0 * M_PI;
   }
   return angle;
+}
+
+bool angle_in_sector(double angle, double center, double width)
+{
+  return std::abs(normalize_angle(angle - center)) <= width * 0.5;
 }
 
 double clamp(double value, double lower, double upper)
@@ -74,6 +87,7 @@ public:
     this->declare_parameter<std::string>("base_frame", "base_footprint");
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
     this->declare_parameter<std::string>("scan_topic", "/scan");
+    this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<int>("repeat_count", 2);
     this->declare_parameter<double>("wait_seconds", 3.0);
     this->declare_parameter<double>("precision_wait_seconds", 5.0);
@@ -89,7 +103,11 @@ public:
     this->declare_parameter<double>("curve_min_linear_speed", 0.03);
     this->declare_parameter<double>("slot_departure_linear_speed", 0.065);
     this->declare_parameter<bool>("enable_lidar_safety", true);
-    this->declare_parameter<double>("front_stop_distance", 0.28);
+    this->declare_parameter<double>("front_emergency_stop_distance", 0.60);
+    this->declare_parameter<double>("front_stop_distance", 0.70);
+    this->declare_parameter<double>("front_clear_distance", 0.90);
+    this->declare_parameter<double>("forward_collision_sector_angle", M_PI_2);
+    this->declare_parameter<double>("forward_collision_stop_distance", 0.50);
     this->declare_parameter<double>("front_sector_angle", 0.70);
     this->declare_parameter<double>("rear_stop_distance", 0.18);
     this->declare_parameter<double>("rear_sector_angle", 0.70);
@@ -108,6 +126,32 @@ public:
     this->declare_parameter<double>("parking_prep_linear_speed", 0.045);
     this->declare_parameter<double>("parking_prep_angular_speed", 0.22);
     this->declare_parameter<double>("side_sector_angle", 0.70);
+    this->declare_parameter<bool>("enable_obstacle_avoidance", true);
+    this->declare_parameter<double>("obstacle_wait_seconds", 0.0);
+    this->declare_parameter<int>("obstacle_avoidance_max_attempts", 1);
+    this->declare_parameter<double>("obstacle_avoidance_trigger_distance", 0.75);
+    this->declare_parameter<double>("dwa_max_duration", 6.0);
+    this->declare_parameter<double>("dwa_min_duration", 1.0);
+    this->declare_parameter<double>("dwa_sim_time", 3.0);
+    this->declare_parameter<double>("dwa_sim_step", 0.10);
+    this->declare_parameter<double>("dwa_min_linear_speed", 0.02);
+    this->declare_parameter<double>("dwa_max_linear_speed", 0.075);
+    this->declare_parameter<double>("dwa_max_angular_speed", 0.55);
+    this->declare_parameter<int>("dwa_linear_samples", 4);
+    this->declare_parameter<int>("dwa_angular_samples", 11);
+    this->declare_parameter<double>("dwa_robot_radius", 0.18);
+    this->declare_parameter<double>("dwa_lidar_x_offset", 0.08);
+    this->declare_parameter<double>("dwa_safety_margin", 0.25);
+    this->declare_parameter<double>("dwa_static_map_clearance", 0.24);
+    this->declare_parameter<double>("dwa_obstacle_range", 1.6);
+    this->declare_parameter<double>("dwa_goal_weight", 0.9);
+    this->declare_parameter<double>("dwa_clearance_weight", 2.0);
+    this->declare_parameter<double>("dwa_speed_weight", 1.2);
+    this->declare_parameter<double>("dwa_front_clear_hold", 0.8);
+    this->declare_parameter<double>("dwa_stuck_turn_speed", 0.38);
+    this->declare_parameter<bool>("ignore_mapped_front_obstacles", true);
+    this->declare_parameter<double>("map_obstacle_padding", 0.08);
+    this->declare_parameter<int>("map_occupied_threshold", 50);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -127,7 +171,14 @@ public:
     curve_min_linear_speed_ = this->get_parameter("curve_min_linear_speed").as_double();
     slot_departure_linear_speed_ = this->get_parameter("slot_departure_linear_speed").as_double();
     enable_lidar_safety_ = this->get_parameter("enable_lidar_safety").as_bool();
+    front_emergency_stop_distance_ =
+      this->get_parameter("front_emergency_stop_distance").as_double();
     front_stop_distance_ = this->get_parameter("front_stop_distance").as_double();
+    front_clear_distance_ = this->get_parameter("front_clear_distance").as_double();
+    forward_collision_sector_angle_ =
+      this->get_parameter("forward_collision_sector_angle").as_double();
+    forward_collision_stop_distance_ =
+      this->get_parameter("forward_collision_stop_distance").as_double();
     front_sector_angle_ = this->get_parameter("front_sector_angle").as_double();
     rear_stop_distance_ = this->get_parameter("rear_stop_distance").as_double();
     rear_sector_angle_ = this->get_parameter("rear_sector_angle").as_double();
@@ -147,6 +198,35 @@ public:
     parking_prep_linear_speed_ = this->get_parameter("parking_prep_linear_speed").as_double();
     parking_prep_angular_speed_ = this->get_parameter("parking_prep_angular_speed").as_double();
     side_sector_angle_ = this->get_parameter("side_sector_angle").as_double();
+    enable_obstacle_avoidance_ = this->get_parameter("enable_obstacle_avoidance").as_bool();
+    obstacle_wait_seconds_ = this->get_parameter("obstacle_wait_seconds").as_double();
+    obstacle_avoidance_max_attempts_ =
+      this->get_parameter("obstacle_avoidance_max_attempts").as_int();
+    obstacle_avoidance_trigger_distance_ =
+      this->get_parameter("obstacle_avoidance_trigger_distance").as_double();
+    dwa_max_duration_ = this->get_parameter("dwa_max_duration").as_double();
+    dwa_min_duration_ = this->get_parameter("dwa_min_duration").as_double();
+    dwa_sim_time_ = this->get_parameter("dwa_sim_time").as_double();
+    dwa_sim_step_ = this->get_parameter("dwa_sim_step").as_double();
+    dwa_min_linear_speed_ = this->get_parameter("dwa_min_linear_speed").as_double();
+    dwa_max_linear_speed_ = this->get_parameter("dwa_max_linear_speed").as_double();
+    dwa_max_angular_speed_ = this->get_parameter("dwa_max_angular_speed").as_double();
+    dwa_linear_samples_ = this->get_parameter("dwa_linear_samples").as_int();
+    dwa_angular_samples_ = this->get_parameter("dwa_angular_samples").as_int();
+    dwa_robot_radius_ = this->get_parameter("dwa_robot_radius").as_double();
+    dwa_lidar_x_offset_ = this->get_parameter("dwa_lidar_x_offset").as_double();
+    dwa_safety_margin_ = this->get_parameter("dwa_safety_margin").as_double();
+    dwa_static_map_clearance_ = this->get_parameter("dwa_static_map_clearance").as_double();
+    dwa_obstacle_range_ = this->get_parameter("dwa_obstacle_range").as_double();
+    dwa_goal_weight_ = this->get_parameter("dwa_goal_weight").as_double();
+    dwa_clearance_weight_ = this->get_parameter("dwa_clearance_weight").as_double();
+    dwa_speed_weight_ = this->get_parameter("dwa_speed_weight").as_double();
+    dwa_front_clear_hold_ = this->get_parameter("dwa_front_clear_hold").as_double();
+    dwa_stuck_turn_speed_ = this->get_parameter("dwa_stuck_turn_speed").as_double();
+    ignore_mapped_front_obstacles_ =
+      this->get_parameter("ignore_mapped_front_obstacles").as_bool();
+    map_obstacle_padding_ = this->get_parameter("map_obstacle_padding").as_double();
+    map_occupied_threshold_ = this->get_parameter("map_occupied_threshold").as_int();
 
     load_topology();
 
@@ -157,6 +237,11 @@ public:
       this->get_parameter("scan_topic").as_string(),
       rclcpp::SensorDataQoS(),
       std::bind(&MissionLoop::scan_callback, this, std::placeholders::_1));
+
+    map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
+      this->get_parameter("map_topic").as_string(),
+      rclcpp::QoS(1).transient_local().reliable(),
+      std::bind(&MissionLoop::map_callback, this, std::placeholders::_1));
 
     mission_command_sub_ = this->create_subscription<std_msgs::msg::String>(
       "mission_command",
@@ -197,6 +282,8 @@ private:
 
     size_t target_index = 0;
     rclcpp::Rate rate(20.0);
+    std::optional<rclcpp::Time> blocked_since;
+    int avoidance_attempts = 0;
 
     while (rclcpp::ok() && target_index < path.size()) {
       rclcpp::spin_some(this->get_node_base_interface());
@@ -225,11 +312,49 @@ private:
 
         RCLCPP_INFO(this->get_logger(), "Passed waypoint %s", target_name.c_str());
         ++target_index;
+        avoidance_attempts = 0;
         continue;
       }
 
       const bool leaving_leader_slot =
         is_leader_slot(source_name) && is_entry_node(target_name);
+
+      if (!leaving_leader_slot && is_front_obstructed()) {
+        stop();
+        if (avoidance_attempts >= obstacle_avoidance_max_attempts_) {
+          RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 2000,
+            "Front obstacle still blocks the route after %d avoidance attempt(s). Waiting for it to clear.",
+            avoidance_attempts);
+          rate.sleep();
+          continue;
+        }
+        if (!blocked_since.has_value()) {
+          blocked_since = this->now();
+          RCLCPP_WARN(
+            this->get_logger(),
+            "Front obstacle detected. Waiting %.1f seconds before avoidance.",
+            obstacle_wait_seconds_);
+        }
+        if ((this->now() - blocked_since.value()).seconds() >= obstacle_wait_seconds_) {
+          if (try_avoid_front_obstacle(avoidance_attempts + 1, target)) {
+            ++avoidance_attempts;
+            blocked_since.reset();
+          } else {
+            RCLCPP_WARN_THROTTLE(
+              this->get_logger(), *this->get_clock(), 2000,
+              "Obstacle avoidance unavailable. Waiting for obstacle to clear.");
+          }
+        }
+        rate.sleep();
+        continue;
+      }
+
+      if ((blocked_since.has_value() || avoidance_attempts > 0) && is_front_clear()) {
+        RCLCPP_INFO(this->get_logger(), "Front obstacle cleared. Resuming mission path.");
+        blocked_since.reset();
+        avoidance_attempts = 0;
+      }
       auto command = leaving_leader_slot ?
         make_slot_departure_command() :
         make_drive_command(pose.value(), target, is_final);
@@ -597,25 +722,378 @@ private:
     return 1;
   }
 
-  void publish_timed_motion(
-    double linear_x,
-    double angular_z,
-    double duration,
-    bool forward_safety)
+  bool is_front_blocked() const
   {
-    const auto end_time = this->now() + rclcpp::Duration::from_seconds(duration);
+    return enable_lidar_safety_ &&
+      std::isfinite(front_min_range_) &&
+      front_min_range_ <= front_stop_distance_;
+  }
+
+  bool is_front_emergency_blocked() const
+  {
+    return enable_lidar_safety_ &&
+      std::isfinite(front_min_range_) &&
+      front_min_range_ <= front_emergency_stop_distance_;
+  }
+
+  bool is_forward_collision_blocked() const
+  {
+    return enable_lidar_safety_ &&
+      std::isfinite(forward_collision_min_range_) &&
+      forward_collision_min_range_ <= forward_collision_stop_distance_;
+  }
+
+  bool is_front_clear() const
+  {
+    return !enable_lidar_safety_ ||
+      (std::isfinite(front_min_range_) && front_min_range_ >= front_clear_distance_);
+  }
+
+  bool is_front_obstructed() const
+  {
+    return enable_lidar_safety_ &&
+      (
+        is_front_emergency_blocked() ||
+        is_forward_collision_blocked() ||
+        (std::isfinite(front_min_range_) &&
+        front_min_range_ <= obstacle_avoidance_trigger_distance_)
+      );
+  }
+
+  bool is_mapped_obstacle(double x, double y) const
+  {
+    if (!latest_map_) {
+      return false;
+    }
+
+    const auto & info = latest_map_->info;
+    if (info.resolution <= 0.0) {
+      return false;
+    }
+
+    const int map_x = static_cast<int>(
+      std::floor((x - info.origin.position.x) / info.resolution));
+    const int map_y = static_cast<int>(
+      std::floor((y - info.origin.position.y) / info.resolution));
+    if (
+      map_x < 0 || map_y < 0 ||
+      map_x >= static_cast<int>(info.width) ||
+      map_y >= static_cast<int>(info.height))
+    {
+      return false;
+    }
+
+    const int padding_cells =
+      std::max(0, static_cast<int>(std::ceil(map_obstacle_padding_ / info.resolution)));
+    for (int dy = -padding_cells; dy <= padding_cells; ++dy) {
+      for (int dx = -padding_cells; dx <= padding_cells; ++dx) {
+        const int nx = map_x + dx;
+        const int ny = map_y + dy;
+        if (
+          nx < 0 || ny < 0 ||
+          nx >= static_cast<int>(info.width) ||
+          ny >= static_cast<int>(info.height))
+        {
+          continue;
+        }
+
+        const auto index = static_cast<size_t>(ny) * info.width + static_cast<size_t>(nx);
+        if (latest_map_->data[index] >= map_occupied_threshold_) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool is_static_map_collision(double x, double y, double clearance) const
+  {
+    if (!latest_map_ || clearance <= 0.0) {
+      return false;
+    }
+
+    const auto & info = latest_map_->info;
+    if (info.resolution <= 0.0) {
+      return false;
+    }
+
+    const int map_x = static_cast<int>(
+      std::floor((x - info.origin.position.x) / info.resolution));
+    const int map_y = static_cast<int>(
+      std::floor((y - info.origin.position.y) / info.resolution));
+    if (
+      map_x < 0 || map_y < 0 ||
+      map_x >= static_cast<int>(info.width) ||
+      map_y >= static_cast<int>(info.height))
+    {
+      return false;
+    }
+
+    const int radius_cells =
+      std::max(1, static_cast<int>(std::ceil(clearance / info.resolution)));
+    for (int dy = -radius_cells; dy <= radius_cells; ++dy) {
+      for (int dx = -radius_cells; dx <= radius_cells; ++dx) {
+        const int nx = map_x + dx;
+        const int ny = map_y + dy;
+        if (
+          nx < 0 || ny < 0 ||
+          nx >= static_cast<int>(info.width) ||
+          ny >= static_cast<int>(info.height))
+        {
+          continue;
+        }
+
+        const auto index = static_cast<size_t>(ny) * info.width + static_cast<size_t>(nx);
+        if (latest_map_->data[index] < map_occupied_threshold_) {
+          continue;
+        }
+
+        const double cell_x = info.origin.position.x +
+          (static_cast<double>(nx) + 0.5) * info.resolution;
+        const double cell_y = info.origin.position.y +
+          (static_cast<double>(ny) + 0.5) * info.resolution;
+        if (std::hypot(cell_x - x, cell_y - y) <= clearance) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool should_ignore_mapped_scan_point(
+    const RobotPose2D & pose,
+    double angle,
+    double range,
+    bool include_lidar_offset) const
+  {
+    if (!ignore_mapped_front_obstacles_ || !latest_map_) {
+      return false;
+    }
+
+    const double local_x =
+      (include_lidar_offset ? dwa_lidar_x_offset_ : 0.0) + range * std::cos(angle);
+    const double local_y = range * std::sin(angle);
+    const double point_x = pose.x + std::cos(pose.yaw) * local_x -
+      std::sin(pose.yaw) * local_y;
+    const double point_y = pose.y + std::sin(pose.yaw) * local_x +
+      std::cos(pose.yaw) * local_y;
+    return is_mapped_obstacle(point_x, point_y);
+  }
+
+  int choose_avoidance_turn_sign() const
+  {
+    if (std::isfinite(left_avg_range_) && std::isfinite(right_avg_range_)) {
+      return left_avg_range_ >= right_avg_range_ ? 1 : -1;
+    }
+    if (std::isfinite(left_avg_range_)) {
+      return 1;
+    }
+    if (std::isfinite(right_avg_range_)) {
+      return -1;
+    }
+    return 1;
+  }
+
+  std::optional<geometry_msgs::msg::Twist> plan_dwa_command(
+    const RobotPose2D & pose,
+    const MissionNode & target,
+    int preferred_turn_sign) const
+  {
+    const int linear_samples = std::max(1, dwa_linear_samples_);
+    const int angular_samples = std::max(1, dwa_angular_samples_);
+    const double dt = std::max(0.02, dwa_sim_step_);
+    const double obstacle_limit = dwa_safety_margin_;
+    const double cos_yaw = std::cos(pose.yaw);
+    const double sin_yaw = std::sin(pose.yaw);
+    const double front_pressure = front_min_range_;
+    const bool needs_escape_turn =
+      std::isfinite(front_pressure) && front_pressure < front_clear_distance_;
+    const double straight_deadband = 0.08;
+
+    std::optional<geometry_msgs::msg::Twist> best_command;
+    double best_score = -std::numeric_limits<double>::infinity();
+
+    for (int linear_index = 0; linear_index < linear_samples; ++linear_index) {
+      const double linear_ratio = linear_samples == 1 ? 0.0 :
+        static_cast<double>(linear_index) / static_cast<double>(linear_samples - 1);
+      const double linear =
+        dwa_min_linear_speed_ +
+        (dwa_max_linear_speed_ - dwa_min_linear_speed_) * linear_ratio;
+
+      for (int angular_index = 0; angular_index < angular_samples; ++angular_index) {
+        const double angular_ratio = angular_samples == 1 ? 0.5 :
+          static_cast<double>(angular_index) / static_cast<double>(angular_samples - 1);
+        const double angular =
+          -dwa_max_angular_speed_ + 2.0 * dwa_max_angular_speed_ * angular_ratio;
+
+        if (preferred_turn_sign != 0 && angular * preferred_turn_sign < 0.0) {
+          continue;
+        }
+        if (needs_escape_turn && linear > 0.0 && std::abs(angular) < straight_deadband) {
+          continue;
+        }
+        double sim_x = 0.0;
+        double sim_y = 0.0;
+        double sim_yaw = 0.0;
+        double min_clearance = std::numeric_limits<double>::infinity();
+        bool collision = false;
+
+        for (double time = 0.0; time <= dwa_sim_time_; time += dt) {
+          sim_x += linear * std::cos(sim_yaw) * dt;
+          sim_y += linear * std::sin(sim_yaw) * dt;
+          sim_yaw = normalize_angle(sim_yaw + angular * dt);
+
+          const double sim_map_x = pose.x + cos_yaw * sim_x - sin_yaw * sim_y;
+          const double sim_map_y = pose.y + sin_yaw * sim_x + cos_yaw * sim_y;
+          if (is_static_map_collision(sim_map_x, sim_map_y, dwa_static_map_clearance_)) {
+            collision = true;
+            break;
+          }
+
+          for (const auto & point : scan_points_) {
+            const double clearance = std::hypot(point.x - sim_x, point.y - sim_y) -
+              dwa_robot_radius_;
+            min_clearance = std::min(min_clearance, clearance);
+            if (clearance <= obstacle_limit) {
+              collision = true;
+              break;
+            }
+          }
+
+          if (collision) {
+            break;
+          }
+        }
+
+        if (collision) {
+          continue;
+        }
+
+        const double end_x = pose.x + cos_yaw * sim_x - sin_yaw * sim_y;
+        const double end_y = pose.y + sin_yaw * sim_x + cos_yaw * sim_y;
+        const double end_yaw = normalize_angle(pose.yaw + sim_yaw);
+        const double goal_distance = std::hypot(target.x - end_x, target.y - end_y);
+        const double goal_heading = std::atan2(target.y - end_y, target.x - end_x);
+        const double heading_error = std::abs(normalize_angle(goal_heading - end_yaw));
+        const double clearance_score = std::min(min_clearance, dwa_obstacle_range_);
+        const double escape_turn_score = needs_escape_turn && dwa_max_angular_speed_ > 0.0 ?
+          std::min(1.0, std::abs(angular) / dwa_max_angular_speed_) : 0.0;
+        const double stationary_penalty = linear <= 0.001 ? 0.08 : 0.0;
+        const double score =
+          -dwa_goal_weight_ * goal_distance -
+          0.35 * heading_error +
+          dwa_clearance_weight_ * clearance_score +
+          dwa_speed_weight_ * linear +
+          0.75 * escape_turn_score -
+          stationary_penalty;
+
+        if (score > best_score) {
+          geometry_msgs::msg::Twist command;
+          command.linear.x = linear;
+          command.angular.z = angular;
+          best_command = command;
+          best_score = score;
+        }
+      }
+    }
+
+    return best_command;
+  }
+
+  geometry_msgs::msg::Twist make_dwa_turn_in_place_command(int turn_sign = 0) const
+  {
+    geometry_msgs::msg::Twist command;
+    if (turn_sign != 0) {
+      command.angular.z = turn_sign > 0 ? dwa_stuck_turn_speed_ : -dwa_stuck_turn_speed_;
+    } else if (std::isfinite(left_avg_range_) && std::isfinite(right_avg_range_)) {
+      command.angular.z = left_avg_range_ >= right_avg_range_ ?
+        dwa_stuck_turn_speed_ : -dwa_stuck_turn_speed_;
+    } else if (std::isfinite(left_avg_range_)) {
+      command.angular.z = dwa_stuck_turn_speed_;
+    } else if (std::isfinite(right_avg_range_)) {
+      command.angular.z = -dwa_stuck_turn_speed_;
+    } else {
+      command.angular.z = dwa_stuck_turn_speed_;
+    }
+    return command;
+  }
+
+  geometry_msgs::msg::Twist make_immediate_escape_command(int turn_sign) const
+  {
+    auto command = make_dwa_turn_in_place_command(turn_sign);
+    const double front_pressure = front_min_range_;
+    const bool has_room_for_arc =
+      std::isfinite(front_pressure) &&
+      front_pressure > front_stop_distance_ + 0.08 &&
+      !is_forward_collision_blocked() &&
+      !is_front_emergency_blocked();
+
+    if (has_room_for_arc) {
+      command.linear.x = std::min(0.05, dwa_max_linear_speed_);
+    }
+    return command;
+  }
+
+  bool can_resume_mission_drive(const RobotPose2D & pose) const
+  {
+    return is_front_clear() &&
+      !is_static_map_collision(pose.x, pose.y, dwa_static_map_clearance_) &&
+      !is_front_emergency_blocked() &&
+      !is_forward_collision_blocked();
+  }
+
+  bool try_avoid_front_obstacle(int attempt, const MissionNode & target)
+  {
+    if (!enable_obstacle_avoidance_) {
+      return false;
+    }
+
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Starting DWA obstacle avoidance attempt %d. front=%.2f raw_front=%.2f",
+      attempt,
+      front_min_range_,
+      raw_front_min_range_);
+
+    const auto end_time = this->now() + rclcpp::Duration::from_seconds(dwa_max_duration_);
+    const auto start_time = this->now();
+    const int turn_sign = choose_avoidance_turn_sign();
+    std::optional<rclcpp::Time> front_clear_since;
     rclcpp::Rate rate(20.0);
+
     while (rclcpp::ok() && this->now() < end_time) {
       rclcpp::spin_some(this->get_node_base_interface());
-      geometry_msgs::msg::Twist command;
-      command.linear.x = linear_x;
-      command.angular.z = angular_z;
-      cmd_pub_->publish(forward_safety ? apply_lidar_safety(command) : apply_rear_lidar_safety(command));
+      const auto pose = lookup_robot_pose();
+      if (!pose.has_value()) {
+        rate.sleep();
+        continue;
+      }
+
+      const bool min_duration_passed =
+        (this->now() - start_time).seconds() >= dwa_min_duration_;
+      if (min_duration_passed && can_resume_mission_drive(pose.value())) {
+        if (!front_clear_since.has_value()) {
+          front_clear_since = this->now();
+        } else if ((this->now() - front_clear_since.value()).seconds() >= dwa_front_clear_hold_) {
+          stop();
+          RCLCPP_INFO(this->get_logger(), "DWA avoidance cleared the front path.");
+          return true;
+        }
+      } else {
+        front_clear_since.reset();
+      }
+
+      auto command =
+        plan_dwa_command(pose.value(), target, turn_sign).value_or(
+        make_immediate_escape_command(turn_sign));
+      cmd_pub_->publish(apply_dwa_lidar_safety(command));
       rate.sleep();
     }
 
     stop();
-    rclcpp::sleep_for(200ms);
+    RCLCPP_WARN(this->get_logger(), "DWA avoidance timed out before the front path cleared.");
+    return false;
   }
 
   bool is_dock_reached(const std::string & dock_node_name)
@@ -739,9 +1217,45 @@ private:
     }
   }
 
+  std::optional<RobotPose2D> lookup_robot_pose_silent()
+  {
+    try {
+      const auto transform = tf_buffer_.lookupTransform(map_frame_, base_frame_, tf2::TimePointZero);
+      RobotPose2D pose;
+      pose.x = transform.transform.translation.x;
+      pose.y = transform.transform.translation.y;
+      pose.yaw = yaw_from_quaternion(transform.transform.rotation);
+      return pose;
+    } catch (const tf2::TransformException &) {
+      return std::nullopt;
+    }
+  }
+
   geometry_msgs::msg::Twist apply_lidar_safety(geometry_msgs::msg::Twist command)
   {
     if (!enable_lidar_safety_ || command.linear.x <= 0.0) {
+      return command;
+    }
+
+    if (is_front_emergency_blocked()) {
+      command.linear.x = 0.0;
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Front safety obstacle raw=%.2fm dynamic=%.2fm <= %.2fm. Blocking forward motion.",
+        raw_front_min_range_,
+        front_min_range_,
+        front_emergency_stop_distance_);
+      return command;
+    }
+
+    if (is_forward_collision_blocked()) {
+      command.linear.x = 0.0;
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Forward collision zone obstacle raw=%.2fm dynamic=%.2fm <= %.2fm. Blocking forward motion.",
+        raw_forward_collision_min_range_,
+        forward_collision_min_range_,
+        forward_collision_stop_distance_);
       return command;
     }
 
@@ -759,6 +1273,25 @@ private:
         this->get_logger(), *this->get_clock(), 1000,
         "Front obstacle %.2fm <= %.2fm. Blocking forward motion.",
         front_min_range_, front_stop_distance_);
+    }
+
+    return command;
+  }
+
+  geometry_msgs::msg::Twist apply_dwa_lidar_safety(geometry_msgs::msg::Twist command)
+  {
+    if (!enable_lidar_safety_ || command.linear.x <= 0.0) {
+      return command;
+    }
+
+    if (is_front_emergency_blocked()) {
+      command.linear.x = 0.0;
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "DWA front emergency obstacle raw=%.2fm dynamic=%.2fm <= %.2fm. Rotating in place.",
+        raw_front_min_range_,
+        front_min_range_,
+        front_emergency_stop_distance_);
     }
 
     return command;
@@ -792,11 +1325,18 @@ private:
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     double front_min_range = std::numeric_limits<double>::infinity();
+    double raw_front_min_range = std::numeric_limits<double>::infinity();
+    double forward_collision_min_range = std::numeric_limits<double>::infinity();
+    double raw_forward_collision_min_range = std::numeric_limits<double>::infinity();
     double rear_min_range = std::numeric_limits<double>::infinity();
     double left_sum = 0.0;
     double right_sum = 0.0;
     int left_count = 0;
     int right_count = 0;
+    bool front_raw_seen = false;
+    bool forward_collision_raw_seen = false;
+    std::vector<ScanPoint2D> scan_points;
+    const auto filter_pose = lookup_robot_pose_silent();
 
     for (size_t index = 0; index < msg->ranges.size(); ++index) {
       const double angle = msg->angle_min + static_cast<double>(index) * msg->angle_increment;
@@ -805,34 +1345,88 @@ private:
         continue;
       }
 
-      if (std::abs(angle) <= front_sector_angle_ * 0.5) {
-        front_min_range = std::min(front_min_range, range);
+      const bool mapped_obstacle =
+        filter_pose.has_value() &&
+        should_ignore_mapped_scan_point(filter_pose.value(), angle, range, true);
+
+      if (range <= dwa_obstacle_range_ && !mapped_obstacle) {
+        scan_points.push_back({
+          dwa_lidar_x_offset_ + range * std::cos(angle),
+          range * std::sin(angle)});
       }
 
-      const double rear_error = std::abs(normalize_angle(angle - M_PI));
-      if (rear_error <= rear_sector_angle_ * 0.5) {
+      if (angle_in_sector(angle, 0.0, front_sector_angle_)) {
+        front_raw_seen = true;
+        raw_front_min_range = std::min(raw_front_min_range, range);
+        const bool mapped_front_obstacle =
+          filter_pose.has_value() &&
+          should_ignore_mapped_scan_point(filter_pose.value(), angle, range, false);
+        if (!mapped_front_obstacle) {
+          front_min_range = std::min(front_min_range, range);
+        }
+      }
+
+      if (angle_in_sector(angle, 0.0, forward_collision_sector_angle_)) {
+        forward_collision_raw_seen = true;
+        raw_forward_collision_min_range = std::min(raw_forward_collision_min_range, range);
+        const bool mapped_forward_obstacle =
+          filter_pose.has_value() &&
+          should_ignore_mapped_scan_point(filter_pose.value(), angle, range, false);
+        if (!mapped_forward_obstacle) {
+          forward_collision_min_range = std::min(forward_collision_min_range, range);
+        }
+      }
+
+      if (angle_in_sector(angle, M_PI, rear_sector_angle_)) {
         rear_min_range = std::min(rear_min_range, range);
       }
 
-      const double left_error = std::abs(normalize_angle(angle - M_PI_2));
-      if (left_error <= side_sector_angle_ * 0.5) {
+      if (angle_in_sector(angle, M_PI_2, side_sector_angle_)) {
         left_sum += range;
         ++left_count;
       }
 
-      const double right_error = std::abs(normalize_angle(angle + M_PI_2));
-      if (right_error <= side_sector_angle_ * 0.5) {
+      if (angle_in_sector(angle, -M_PI_2, side_sector_angle_)) {
         right_sum += range;
         ++right_count;
       }
     }
 
+    if (
+      !std::isfinite(front_min_range) &&
+      front_raw_seen &&
+      ignore_mapped_front_obstacles_ &&
+      latest_map_ &&
+      filter_pose.has_value())
+    {
+      front_min_range = msg->range_max;
+    }
+
+    if (
+      !std::isfinite(forward_collision_min_range) &&
+      forward_collision_raw_seen &&
+      ignore_mapped_front_obstacles_ &&
+      latest_map_ &&
+      filter_pose.has_value())
+    {
+      forward_collision_min_range = msg->range_max;
+    }
+
+    raw_front_min_range_ = raw_front_min_range;
+    raw_forward_collision_min_range_ = raw_forward_collision_min_range;
     front_min_range_ = front_min_range;
+    forward_collision_min_range_ = forward_collision_min_range;
     rear_min_range_ = rear_min_range;
     left_avg_range_ = left_count > 0 ? left_sum / static_cast<double>(left_count) :
       std::numeric_limits<double>::infinity();
     right_avg_range_ = right_count > 0 ? right_sum / static_cast<double>(right_count) :
       std::numeric_limits<double>::infinity();
+    scan_points_ = std::move(scan_points);
+  }
+
+  void map_callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
+  {
+    latest_map_ = msg;
   }
 
   void wait_at_slot(
@@ -968,7 +1562,10 @@ private:
   double curve_min_linear_speed_{0.03};
   double slot_departure_linear_speed_{0.065};
   bool enable_lidar_safety_{true};
-  double front_stop_distance_{0.28};
+  double front_emergency_stop_distance_{0.60};
+  double front_stop_distance_{0.70};
+  double forward_collision_sector_angle_{M_PI_2};
+  double forward_collision_stop_distance_{0.50};
   double front_sector_angle_{0.70};
   double rear_stop_distance_{0.18};
   double rear_sector_angle_{0.70};
@@ -988,14 +1585,47 @@ private:
   double parking_prep_linear_speed_{0.045};
   double parking_prep_angular_speed_{0.22};
   double side_sector_angle_{0.70};
+  bool enable_obstacle_avoidance_{true};
+  double obstacle_wait_seconds_{0.0};
+  int obstacle_avoidance_max_attempts_{1};
+  double obstacle_avoidance_trigger_distance_{0.75};
+  double dwa_max_duration_{6.0};
+  double dwa_min_duration_{1.0};
+  double dwa_sim_time_{3.0};
+  double dwa_sim_step_{0.10};
+  double dwa_min_linear_speed_{0.02};
+  double dwa_max_linear_speed_{0.075};
+  double dwa_max_angular_speed_{0.55};
+  int dwa_linear_samples_{4};
+  int dwa_angular_samples_{11};
+  double dwa_robot_radius_{0.18};
+  double dwa_lidar_x_offset_{0.08};
+  double dwa_safety_margin_{0.25};
+  double dwa_static_map_clearance_{0.24};
+  double dwa_obstacle_range_{1.6};
+  double dwa_goal_weight_{0.9};
+  double dwa_clearance_weight_{2.0};
+  double dwa_speed_weight_{1.2};
+  double dwa_front_clear_hold_{0.8};
+  double dwa_stuck_turn_speed_{0.38};
+  bool ignore_mapped_front_obstacles_{true};
+  double map_obstacle_padding_{0.08};
+  int map_occupied_threshold_{50};
+  double raw_front_min_range_{std::numeric_limits<double>::infinity()};
+  double raw_forward_collision_min_range_{std::numeric_limits<double>::infinity()};
   double front_min_range_{std::numeric_limits<double>::infinity()};
+  double forward_collision_min_range_{std::numeric_limits<double>::infinity()};
+  double front_clear_distance_{0.90};
   double rear_min_range_{std::numeric_limits<double>::infinity()};
   double left_avg_range_{std::numeric_limits<double>::infinity()};
   double right_avg_range_{std::numeric_limits<double>::infinity()};
+  std::vector<ScanPoint2D> scan_points_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
+  nav_msgs::msg::OccupancyGrid::SharedPtr latest_map_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 };
