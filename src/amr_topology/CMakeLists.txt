@@ -22,7 +22,6 @@ ament_target_dependencies(
   ament_index_cpp
   geometry_msgs
   rclcpp
-  sensor_msgs
   std_msgs
   tf2_ros
 )
@@ -31,10 +30,13 @@ target_link_libraries(topology_follower yaml-cpp)
 add_executable(
   mission_loop
   src/mission_loop.cpp
-  src/obstacle_avoidance.cpp
+  src/local_astar_pure_pursuit.cpp
 )
 target_compile_features(mission_loop PUBLIC cxx_std_17)
-target_include_directories(mission_loop PUBLIC include)
+target_include_directories(mission_loop PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 ament_target_dependencies(
   mission_loop
   ament_index_cpp
@@ -55,6 +57,7 @@ install(TARGETS
 
 install(DIRECTORY
   config
+  include
   launch
   maps
   DESTINATION share/${PROJECT_NAME}

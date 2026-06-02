@@ -13,7 +13,6 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/laser_scan.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <yaml-cpp/yaml.h>
@@ -74,7 +73,6 @@ public:
     this->declare_parameter<std::string>("map_frame", "map");
     this->declare_parameter<std::string>("base_frame", "base_link");
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
-    this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<double>("goal_tolerance", 0.08);
     this->declare_parameter<double>("waypoint_tolerance", 0.18);
     this->declare_parameter<double>("start_skip_tolerance", 0.35);
@@ -83,9 +81,6 @@ public:
     this->declare_parameter<double>("max_angular_speed", 0.45);
     this->declare_parameter<double>("min_turning_linear_speed", 0.03);
     this->declare_parameter<double>("drive_heading_limit", 1.57);
-    this->declare_parameter<bool>("enable_lidar_safety", true);
-    this->declare_parameter<double>("front_stop_distance", 0.28);
-    this->declare_parameter<double>("front_sector_angle", 0.70);
     this->declare_parameter<bool>("align_final_yaw", false);
     this->declare_parameter<double>("linear_gain", 0.45);
     this->declare_parameter<double>("angular_gain", 0.8);
@@ -102,9 +97,6 @@ public:
     max_angular_speed_ = this->get_parameter("max_angular_speed").as_double();
     min_turning_linear_speed_ = this->get_parameter("min_turning_linear_speed").as_double();
     drive_heading_limit_ = this->get_parameter("drive_heading_limit").as_double();
-    enable_lidar_safety_ = this->get_parameter("enable_lidar_safety").as_bool();
-    front_stop_distance_ = this->get_parameter("front_stop_distance").as_double();
-    front_sector_angle_ = this->get_parameter("front_sector_angle").as_double();
     align_final_yaw_ = this->get_parameter("align_final_yaw").as_bool();
     linear_gain_ = this->get_parameter("linear_gain").as_double();
     angular_gain_ = this->get_parameter("angular_gain").as_double();
@@ -113,12 +105,6 @@ public:
 
     const auto cmd_vel_topic = this->get_parameter("cmd_vel_topic").as_string();
     cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
-
-    const auto scan_topic = this->get_parameter("scan_topic").as_string();
-    scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      scan_topic,
-      rclcpp::SensorDataQoS(),
-      std::bind(&TopologyFollower::scan_callback, this, std::placeholders::_1));
   }
 
   void run()
@@ -176,8 +162,7 @@ public:
         }
       }
 
-      auto command = make_command(pose.value(), target);
-      cmd_pub_->publish(apply_lidar_safety(command));
+      cmd_pub_->publish(make_command(pose.value(), target));
 
       rate.sleep();
     }
@@ -254,52 +239,6 @@ private:
     return command;
   }
 
-  geometry_msgs::msg::Twist apply_lidar_safety(geometry_msgs::msg::Twist command)
-  {
-    if (!enable_lidar_safety_ || command.linear.x <= 0.0) {
-      return command;
-    }
-
-    if (!std::isfinite(front_min_range_)) {
-      command.linear.x = 0.0;
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 2000,
-        "No valid front laser range. Blocking forward motion.");
-      return command;
-    }
-
-    if (front_min_range_ <= front_stop_distance_) {
-      command.linear.x = 0.0;
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 1000,
-        "Front obstacle %.2fm <= %.2fm. Blocking forward motion.",
-        front_min_range_, front_stop_distance_);
-    }
-
-    return command;
-  }
-
-  void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
-  {
-    double min_range = std::numeric_limits<double>::infinity();
-
-    for (size_t index = 0; index < msg->ranges.size(); ++index) {
-      const double angle = msg->angle_min + static_cast<double>(index) * msg->angle_increment;
-      if (std::abs(angle) > front_sector_angle_ * 0.5) {
-        continue;
-      }
-
-      const double range = msg->ranges[index];
-      if (!std::isfinite(range) || range < msg->range_min || range > msg->range_max) {
-        continue;
-      }
-
-      min_range = std::min(min_range, range);
-    }
-
-    front_min_range_ = min_range;
-  }
-
   void load_topology()
   {
     const YAML::Node topology = YAML::LoadFile(topology_file_);
@@ -355,16 +294,11 @@ private:
   double max_angular_speed_{0.45};
   double min_turning_linear_speed_{0.03};
   double drive_heading_limit_{1.57};
-  bool enable_lidar_safety_{true};
   bool align_final_yaw_{false};
-  double front_stop_distance_{0.28};
-  double front_sector_angle_{0.70};
   double linear_gain_{0.45};
   double angular_gain_{0.8};
-  double front_min_range_{std::numeric_limits<double>::infinity()};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
-  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 };
