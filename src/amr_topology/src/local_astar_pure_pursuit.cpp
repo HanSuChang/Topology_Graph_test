@@ -89,7 +89,7 @@ LocalPlannerDecision LocalAStarPurePursuit::update(
     decision.command = stop_command();
     decision.state = state_name();
     return decision;
-  } else if (side_emergency) {
+  } else if (side_emergency && state_ != State::FollowDetour) {
     decision.has_command = true;
     decision.command = make_side_escape_command(scan_summary);
     decision.state = "side_escape";
@@ -118,7 +118,7 @@ LocalPlannerDecision LocalAStarPurePursuit::update(
       }
       return decision;
 
-    case State::FollowDetour:
+    case State::FollowDetour: {
       decision.has_command = true;
       decision.state = state_name();
       if (std::hypot(target.x - pose.x, target.y - pose.y) <= options_.goal_tolerance) {
@@ -136,6 +136,7 @@ LocalPlannerDecision LocalAStarPurePursuit::update(
       }
       decision.command = make_pure_pursuit_command(pose);
       return decision;
+    }
 
     case State::Blocked:
       decision.has_command = true;
@@ -196,6 +197,8 @@ void LocalAStarPurePursuit::reset()
 {
   state_ = State::Normal;
   path_.clear();
+  detour_alignment_done_ = false;
+  detour_alignment_active_ = false;
 }
 
 bool LocalAStarPurePursuit::scan_is_fresh(const rclcpp::Time & now) const
@@ -472,7 +475,7 @@ std::vector<Target2D> LocalAStarPurePursuit::astar(
 }
 
 geometry_msgs::msg::Twist LocalAStarPurePursuit::make_pure_pursuit_command(
-  const Pose2D & pose) const
+  const Pose2D & pose)
 {
   geometry_msgs::msg::Twist command;
   if (path_.empty()) {
@@ -508,14 +511,29 @@ geometry_msgs::msg::Twist LocalAStarPurePursuit::make_pure_pursuit_command(
     -options_.max_angular_speed,
     options_.max_angular_speed);
 
+  if (!detour_alignment_done_) {
+    const double abs_heading_error = std::abs(heading_error);
+    if (!detour_alignment_active_ &&
+      abs_heading_error > options_.rotate_in_place_heading_threshold &&
+      abs_heading_error <= options_.rotate_in_place_max_heading)
+    {
+      detour_alignment_active_ = true;
+    }
+    if (detour_alignment_active_ &&
+      abs_heading_error > options_.rotate_in_place_resume_threshold)
+    {
+      command.linear.x = 0.0;
+      return command;
+    }
+    detour_alignment_active_ = false;
+    detour_alignment_done_ = true;
+  }
+
   const double speed_scale = std::max(0.25, std::cos(heading_error));
   command.linear.x = clamp(
     options_.max_linear_speed * speed_scale,
     options_.min_linear_speed,
     options_.max_linear_speed);
-  if (std::abs(heading_error) > 1.2) {
-    command.linear.x = 0.0;
-  }
   return command;
 }
 
@@ -541,6 +559,10 @@ void LocalAStarPurePursuit::enter_state(State state, const rclcpp::Time & now)
   if (state_ != state) {
     state_ = state;
     state_started_at_ = now;
+    if (state_ == State::FollowDetour) {
+      detour_alignment_done_ = false;
+      detour_alignment_active_ = false;
+    }
   }
 }
 

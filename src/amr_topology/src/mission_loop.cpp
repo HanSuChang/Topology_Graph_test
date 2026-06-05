@@ -122,6 +122,9 @@ public:
     this->declare_parameter<double>("obstacle_front_sector_width", 0.70);
     this->declare_parameter<double>("obstacle_avoid_linear_speed", 0.055);
     this->declare_parameter<double>("obstacle_avoid_angular_speed", 0.22);
+    this->declare_parameter<double>("obstacle_rotate_in_place_heading_threshold", 0.35);
+    this->declare_parameter<double>("obstacle_rotate_in_place_resume_threshold", 0.18);
+    this->declare_parameter<double>("obstacle_rotate_in_place_max_heading", 1.05);
     this->declare_parameter<double>("obstacle_backup_speed", 0.045);
     this->declare_parameter<double>("local_planner_lookahead_distance", 0.28);
     this->declare_parameter<double>("local_planner_goal_tolerance", 0.12);
@@ -178,6 +181,12 @@ public:
       this->get_parameter("obstacle_avoid_linear_speed").as_double();
     planner_options.max_angular_speed =
       this->get_parameter("obstacle_avoid_angular_speed").as_double();
+    planner_options.rotate_in_place_heading_threshold =
+      this->get_parameter("obstacle_rotate_in_place_heading_threshold").as_double();
+    planner_options.rotate_in_place_resume_threshold =
+      this->get_parameter("obstacle_rotate_in_place_resume_threshold").as_double();
+    planner_options.rotate_in_place_max_heading =
+      this->get_parameter("obstacle_rotate_in_place_max_heading").as_double();
     planner_options.lookahead_distance =
       this->get_parameter("local_planner_lookahead_distance").as_double();
     planner_options.goal_tolerance =

@@ -51,6 +51,9 @@ struct LocalPlannerOptions
   double max_angular_speed{0.45};
   double side_escape_angular_speed{0.18};
   double angular_gain{1.2};
+  double rotate_in_place_heading_threshold{0.35};
+  double rotate_in_place_resume_threshold{0.18};
+  double rotate_in_place_max_heading{1.05};
 };
 
 struct LocalPlannerDecision
@@ -123,7 +126,7 @@ private:
     const std::vector<uint8_t> & grid,
     const GridIndex & start,
     const GridIndex & goal) const;
-  geometry_msgs::msg::Twist make_pure_pursuit_command(const Pose2D & pose) const;
+  geometry_msgs::msg::Twist make_pure_pursuit_command(const Pose2D & pose);
   geometry_msgs::msg::Twist make_side_escape_command(const ScanSummary & scan_summary) const;
   geometry_msgs::msg::Twist stop_command() const;
   void enter_state(State state, const rclcpp::Time & now);
@@ -136,6 +139,8 @@ private:
   rclcpp::Time state_started_at_{0, 0, RCL_ROS_TIME};
   State state_{State::Normal};
   std::vector<Target2D> path_;
+  bool detour_alignment_done_{false};
+  bool detour_alignment_active_{false};
 };
 
 }  // namespace amr_topology
