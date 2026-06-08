@@ -34,15 +34,16 @@ struct LocalPlannerOptions
   double rear_stop_distance{0.18};
   double obstacle_trigger_distance{0.42};
   double goal_block_distance{0.35};
-  double stop_and_plan_seconds{1.5};
+  double stop_and_plan_seconds{2.0};
   double front_sector_width{0.70};
   double side_sector_min_angle{0.45};
-  double side_sector_max_angle{1.57};
+  double side_sector_max_angle{1.20};
   double scan_timeout_seconds{0.7};
   double occupied_threshold{50.0};
   double robot_radius{0.18};
   double inflation_radius{0.28};
   double dynamic_obstacle_radius{0.22};
+  double path_corridor_width{0.80};
   double max_plan_distance{3.5};
   double lookahead_distance{0.28};
   double goal_tolerance{0.12};
@@ -127,7 +128,7 @@ private:
     const GridIndex & start,
     const GridIndex & goal) const;
   geometry_msgs::msg::Twist make_pure_pursuit_command(const Pose2D & pose);
-  geometry_msgs::msg::Twist make_side_escape_command(const ScanSummary & scan_summary) const;
+  geometry_msgs::msg::Twist make_side_escape_command(const ScanSummary & scan_summary);
   geometry_msgs::msg::Twist stop_command() const;
   void enter_state(State state, const rclcpp::Time & now);
   std::string state_name() const;
@@ -141,6 +142,8 @@ private:
   std::vector<Target2D> path_;
   bool detour_alignment_done_{false};
   bool detour_alignment_active_{false};
+  bool side_escape_active_{false};
+  double side_escape_direction_{0.0};
 };
 
 }  // namespace amr_topology

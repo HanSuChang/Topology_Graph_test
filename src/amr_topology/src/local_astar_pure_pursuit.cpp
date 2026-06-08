@@ -14,6 +14,8 @@ namespace
 
 constexpr int kFree = 0;
 constexpr int kOccupied = 1;
+constexpr double kPathAlignmentWeight = 0.08;
+constexpr double kBehindStartPenalty = 4.0;
 
 double normalize_angle(double angle)
 {
@@ -46,6 +48,8 @@ int key(int x, int y, int width)
 LocalAStarPurePursuit::LocalAStarPurePursuit(const LocalPlannerOptions & options)
 : options_(options)
 {
+  options_.stop_and_plan_seconds = std::max(2.0, options_.stop_and_plan_seconds);
+  options_.dynamic_obstacle_radius = std::max(0.22, options_.dynamic_obstacle_radius);
 }
 
 void LocalAStarPurePursuit::update_scan(
@@ -77,9 +81,11 @@ LocalPlannerDecision LocalAStarPurePursuit::update(
   const auto scan_summary = summarize_scan();
   const bool front_emergency =
     scan_summary.front_min <= options_.emergency_stop_distance;
+  const double side_min = std::min(scan_summary.left_min, scan_summary.right_min);
   const bool side_emergency =
-    scan_summary.left_min <= options_.side_stop_distance ||
-    scan_summary.right_min <= options_.side_stop_distance;
+    side_min <= options_.side_stop_distance;
+  const bool side_escape_should_continue =
+    side_escape_active_ && side_min <= options_.side_stop_distance + 0.14;
   const bool obstacle_on_link =
     target_direction_is_clear(pose, target, now) == false;
 
@@ -89,12 +95,14 @@ LocalPlannerDecision LocalAStarPurePursuit::update(
     decision.command = stop_command();
     decision.state = state_name();
     return decision;
-  } else if (side_emergency && state_ != State::FollowDetour) {
+  } else if (state_ != State::FollowDetour && (side_emergency || side_escape_should_continue)) {
     decision.has_command = true;
     decision.command = make_side_escape_command(scan_summary);
     decision.state = "side_escape";
     return decision;
   }
+  side_escape_active_ = false;
+  side_escape_direction_ = 0.0;
 
   if (state_ == State::Normal && obstacle_on_link) {
     enter_state(State::StopAndPlan, now);
@@ -134,15 +142,31 @@ LocalPlannerDecision LocalAStarPurePursuit::update(
         decision.state = state_name();
         return decision;
       }
+      if (side_min <= options_.emergency_stop_distance) {
+        enter_state(State::StopAndPlan, now);
+        decision.command = stop_command();
+        decision.state = state_name();
+        return decision;
+      }
       decision.command = make_pure_pursuit_command(pose);
       return decision;
     }
 
     case State::Blocked:
+      if (target_direction_is_clear(pose, target, now)) {
+        reset();
+        decision.state = state_name();
+        return decision;
+      }
       decision.has_command = true;
       decision.blocked = true;
       decision.command = stop_command();
       decision.state = state_name();
+      if (state_elapsed >= options_.stop_and_plan_seconds && make_plan(pose, target)) {
+        decision.blocked = false;
+        enter_state(State::FollowDetour, now);
+        decision.state = state_name();
+      }
       return decision;
   }
 
@@ -199,6 +223,8 @@ void LocalAStarPurePursuit::reset()
   path_.clear();
   detour_alignment_done_ = false;
   detour_alignment_active_ = false;
+  side_escape_active_ = false;
+  side_escape_direction_ = 0.0;
 }
 
 bool LocalAStarPurePursuit::scan_is_fresh(const rclcpp::Time & now) const
@@ -413,6 +439,44 @@ std::vector<Target2D> LocalAStarPurePursuit::astar(
   const auto heuristic = [&goal](int x, int y) {
       return std::hypot(goal.x - x, goal.y - y);
     };
+  const auto path_alignment_penalty = [&start, &goal](int x, int y) {
+      const double vx = static_cast<double>(goal.x - start.x);
+      const double vy = static_cast<double>(goal.y - start.y);
+      const double length_sq = vx * vx + vy * vy;
+      if (length_sq <= 0.0) {
+        return 0.0;
+      }
+
+      const double wx = static_cast<double>(x - start.x);
+      const double wy = static_cast<double>(y - start.y);
+      const double projection = (wx * vx + wy * vy) / length_sq;
+      const double closest_x = static_cast<double>(start.x) + projection * vx;
+      const double closest_y = static_cast<double>(start.y) + projection * vy;
+      const double lateral_cells = std::hypot(x - closest_x, y - closest_y);
+      const double behind_penalty = projection < 0.0 ? kBehindStartPenalty : 0.0;
+      return kPathAlignmentWeight * lateral_cells + behind_penalty;
+    };
+  const auto inside_path_corridor = [this, &start, &goal](int x, int y) {
+      const double vx = static_cast<double>(goal.x - start.x);
+      const double vy = static_cast<double>(goal.y - start.y);
+      const double length_sq = vx * vx + vy * vy;
+      if (length_sq <= 0.0) {
+        return true;
+      }
+
+      const double wx = static_cast<double>(x - start.x);
+      const double wy = static_cast<double>(y - start.y);
+      const double projection = (wx * vx + wy * vy) / length_sq;
+      if (projection < -0.10 || projection > 1.10) {
+        return false;
+      }
+
+      const double closest_x = static_cast<double>(start.x) + projection * vx;
+      const double closest_y = static_cast<double>(start.y) + projection * vy;
+      const double resolution = static_cast<double>(map_->info.resolution);
+      const double lateral_distance = std::hypot(x - closest_x, y - closest_y) * resolution;
+      return lateral_distance <= options_.path_corridor_width;
+    };
 
   std::priority_queue<QueueNode, std::vector<QueueNode>, std::greater<QueueNode>> open;
   std::unordered_map<int, double> cost;
@@ -437,16 +501,16 @@ std::vector<Target2D> LocalAStarPurePursuit::astar(
     for (int i = 0; i < 8; ++i) {
       const int nx = current.x + dxs[i];
       const int ny = current.y + dys[i];
-      if (cell_is_occupied(grid, nx, ny)) {
+      if (cell_is_occupied(grid, nx, ny) || !inside_path_corridor(nx, ny)) {
         continue;
       }
       const double step = i < 4 ? 1.0 : 1.41421356237;
       const int next_key = key(nx, ny, info.width);
-      const double new_cost = cost[current_key] + step;
+      const double new_cost = cost[current_key] + step + path_alignment_penalty(nx, ny);
       if (!cost.count(next_key) || new_cost < cost[next_key]) {
         cost[next_key] = new_cost;
         parent[next_key] = current_key;
-        open.push(QueueNode{nx, ny, new_cost + heuristic(nx, ny)});
+        open.push(QueueNode{nx, ny, new_cost + heuristic(nx, ny) + path_alignment_penalty(nx, ny)});
       }
     }
   }
@@ -530,6 +594,16 @@ geometry_msgs::msg::Twist LocalAStarPurePursuit::make_pure_pursuit_command(
   }
 
   const double speed_scale = std::max(0.25, std::cos(heading_error));
+  const auto scan_summary = summarize_scan();
+  const double side_min = std::min(scan_summary.left_min, scan_summary.right_min);
+  const bool close_to_obstacle =
+    scan_summary.front_min <= options_.obstacle_trigger_distance ||
+    side_min <= options_.side_stop_distance + 0.14;
+  if (close_to_obstacle && std::abs(heading_error) > options_.rotate_in_place_resume_threshold) {
+    command.linear.x = 0.0;
+    return command;
+  }
+
   command.linear.x = clamp(
     options_.max_linear_speed * speed_scale,
     options_.min_linear_speed,
@@ -538,14 +612,29 @@ geometry_msgs::msg::Twist LocalAStarPurePursuit::make_pure_pursuit_command(
 }
 
 geometry_msgs::msg::Twist LocalAStarPurePursuit::make_side_escape_command(
-  const ScanSummary & scan_summary) const
+  const ScanSummary & scan_summary)
 {
   geometry_msgs::msg::Twist command;
-  if (scan_summary.right_min <= scan_summary.left_min) {
-    command.angular.z = options_.side_escape_angular_speed;
-  } else {
-    command.angular.z = -options_.side_escape_angular_speed;
+  if (!side_escape_active_) {
+    side_escape_direction_ = scan_summary.right_min <= scan_summary.left_min ? 1.0 : -1.0;
+    side_escape_active_ = true;
   }
+
+  const double side_min = std::min(scan_summary.left_min, scan_summary.right_min);
+  const bool critical_side = side_min <= options_.emergency_stop_distance;
+  const bool forward_has_room =
+    scan_summary.front_min > options_.emergency_stop_distance + 0.16;
+  if (
+    !critical_side &&
+    forward_has_room)
+  {
+    const double side_clearance_scale =
+      clamp((side_min - options_.emergency_stop_distance) / 0.10, 0.25, 1.0);
+    command.linear.x = std::max(
+      options_.min_linear_speed,
+      options_.max_linear_speed * 0.55 * side_clearance_scale);
+  }
+  command.angular.z = side_escape_direction_ * options_.side_escape_angular_speed;
   return command;
 }
 

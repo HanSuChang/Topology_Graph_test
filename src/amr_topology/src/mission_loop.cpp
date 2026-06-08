@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -10,8 +11,11 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <nav2_msgs/action/follow_path.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -68,11 +72,22 @@ double yaw_from_quaternion(const geometry_msgs::msg::Quaternion & q)
   return std::atan2(siny_cosp, cosy_cosp);
 }
 
+geometry_msgs::msg::Quaternion quaternion_from_yaw(double yaw)
+{
+  geometry_msgs::msg::Quaternion q;
+  q.w = std::cos(yaw * 0.5);
+  q.z = std::sin(yaw * 0.5);
+  return q;
+}
+
 }  // namespace
 
 class MissionLoop : public rclcpp::Node
 {
 public:
+  using FollowPath = nav2_msgs::action::FollowPath;
+  using FollowPathGoalHandle = rclcpp_action::ClientGoalHandle<FollowPath>;
+
   MissionLoop()
   : Node("mission_loop"),
     tf_buffer_(this->get_clock()),
@@ -117,7 +132,7 @@ public:
     this->declare_parameter<double>("obstacle_target_stop_distance", 0.40);
     this->declare_parameter<double>("obstacle_clear_distance", 0.62);
     this->declare_parameter<double>("obstacle_backup_target_distance", 0.38);
-    this->declare_parameter<double>("obstacle_stop_and_scan_seconds", 1.5);
+    this->declare_parameter<double>("obstacle_stop_and_scan_seconds", 2.0);
     this->declare_parameter<double>("obstacle_target_sector_width", 0.52);
     this->declare_parameter<double>("obstacle_front_sector_width", 0.70);
     this->declare_parameter<double>("obstacle_avoid_linear_speed", 0.055);
@@ -132,6 +147,25 @@ public:
     this->declare_parameter<double>("local_planner_robot_radius", 0.18);
     this->declare_parameter<double>("local_planner_inflation_radius", 0.28);
     this->declare_parameter<double>("local_planner_dynamic_obstacle_radius", 0.22);
+    this->declare_parameter<double>("local_planner_path_corridor_width", 0.80);
+    this->declare_parameter<bool>("enable_mppi_rescue", true);
+    this->declare_parameter<std::string>("mppi_follow_path_action", "follow_path");
+    this->declare_parameter<double>("mppi_rescue_timeout_seconds", 18.0);
+    this->declare_parameter<double>("mppi_rescue_stop_and_plan_seconds", 3.0);
+    this->declare_parameter<double>("mppi_rescue_lateral_offset", 0.24);
+    this->declare_parameter<double>("mppi_rescue_forward_offset", 0.85);
+    this->declare_parameter<double>("mppi_rescue_min_handoff_seconds", 5.0);
+    this->declare_parameter<double>("mppi_rescue_handoff_front_clearance", 0.48);
+    this->declare_parameter<double>("mppi_rescue_handoff_side_clearance", 0.30);
+    this->declare_parameter<double>("mppi_rescue_slow_handoff_seconds", 8.0);
+    this->declare_parameter<double>("mppi_rescue_slow_handoff_front_clearance", 0.38);
+    this->declare_parameter<double>("mppi_rescue_side_escape_seconds", 3.0);
+    this->declare_parameter<bool>("enable_corridor_pass", true);
+    this->declare_parameter<double>("corridor_robot_width", 0.306);
+    this->declare_parameter<double>("corridor_side_clearance", 0.07);
+    this->declare_parameter<double>("corridor_min_passage_width", 0.45);
+    this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
+    this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -161,6 +195,38 @@ public:
     dock_parking_lateral_offset_ = this->get_parameter("dock_parking_lateral_offset").as_double();
     dock_linear_gain_ = this->get_parameter("dock_linear_gain").as_double();
     dock_angular_gain_ = this->get_parameter("dock_angular_gain").as_double();
+    enable_mppi_rescue_ = this->get_parameter("enable_mppi_rescue").as_bool();
+    mppi_rescue_timeout_seconds_ = std::max(
+      18.0,
+      this->get_parameter("mppi_rescue_timeout_seconds").as_double());
+    mppi_rescue_stop_and_plan_seconds_ =
+      this->get_parameter("mppi_rescue_stop_and_plan_seconds").as_double();
+    mppi_rescue_lateral_offset_ =
+      this->get_parameter("mppi_rescue_lateral_offset").as_double();
+    mppi_rescue_forward_offset_ =
+      this->get_parameter("mppi_rescue_forward_offset").as_double();
+    mppi_rescue_min_handoff_seconds_ =
+      this->get_parameter("mppi_rescue_min_handoff_seconds").as_double();
+    mppi_rescue_handoff_front_clearance_ =
+      this->get_parameter("mppi_rescue_handoff_front_clearance").as_double();
+    mppi_rescue_handoff_side_clearance_ =
+      this->get_parameter("mppi_rescue_handoff_side_clearance").as_double();
+    mppi_rescue_slow_handoff_seconds_ =
+      this->get_parameter("mppi_rescue_slow_handoff_seconds").as_double();
+    mppi_rescue_slow_handoff_front_clearance_ =
+      this->get_parameter("mppi_rescue_slow_handoff_front_clearance").as_double();
+    mppi_rescue_side_escape_seconds_ =
+      this->get_parameter("mppi_rescue_side_escape_seconds").as_double();
+    enable_corridor_pass_ = this->get_parameter("enable_corridor_pass").as_bool();
+    corridor_robot_width_ = this->get_parameter("corridor_robot_width").as_double();
+    corridor_side_clearance_ = this->get_parameter("corridor_side_clearance").as_double();
+    corridor_min_passage_width_ = std::max(
+      this->get_parameter("corridor_min_passage_width").as_double(),
+      corridor_robot_width_ + 2.0 * corridor_side_clearance_);
+    corridor_hard_stop_width_ =
+      this->get_parameter("corridor_hard_stop_width").as_double();
+    corridor_max_lateral_offset_ =
+      this->get_parameter("corridor_max_lateral_offset").as_double();
 
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
@@ -199,12 +265,17 @@ public:
       this->get_parameter("local_planner_inflation_radius").as_double();
     planner_options.dynamic_obstacle_radius =
       this->get_parameter("local_planner_dynamic_obstacle_radius").as_double();
+    planner_options.path_corridor_width =
+      this->get_parameter("local_planner_path_corridor_width").as_double();
     local_planner_ = amr_topology::LocalAStarPurePursuit(planner_options);
 
     load_topology();
 
     cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       this->get_parameter("cmd_vel_topic").as_string(), 10);
+    mppi_follow_path_client_ = rclcpp_action::create_client<FollowPath>(
+      this,
+      this->get_parameter("mppi_follow_path_action").as_string());
 
     mission_command_sub_ = this->create_subscription<std_msgs::msg::String>(
       "mission_command",
@@ -229,14 +300,35 @@ public:
     for (int cycle = 1; cycle <= repeat_count_ && rclcpp::ok(); ++cycle) {
       RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to A", cycle, repeat_count_);
       go_path({"loading", "intersection_1", "a_entry", "a_leader_slot"});
+      if (!rclcpp::ok()) {
+        return;
+      }
       wait_at_slot("A", "a_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
       run_precision_slot_mission("A", "a_leader_slot_precision", "a_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
       return_to_loading({"a_leader_slot_precision", "a_entry", "intersection_1", "loading"});
+      if (!rclcpp::ok()) {
+        return;
+      }
 
       RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to B", cycle, repeat_count_);
       go_path({"loading", "intersection_2", "b_entry", "b_leader_slot"});
+      if (!rclcpp::ok()) {
+        return;
+      }
       wait_at_slot("B", "b_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
       run_precision_slot_mission("B", "b_leader_slot_precision", "b_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
       return_to_loading({"b_leader_slot_precision", "b_entry", "intersection_2", "loading"});
     }
 
@@ -244,6 +336,16 @@ public:
   }
 
 private:
+  struct CorridorPassDecision
+  {
+    bool passable{false};
+    bool hard_blocked{false};
+    double width{0.0};
+    double left_min{std::numeric_limits<double>::infinity()};
+    double right_min{std::numeric_limits<double>::infinity()};
+    double signed_lateral_offset{0.0};
+  };
+
   void go_path(const std::vector<std::string> & path)
   {
     if (path.empty()) {
@@ -269,6 +371,59 @@ private:
       const double distance = distance_to_target(pose.value(), target);
       const double tolerance = is_final ? goal_tolerance_ : waypoint_tolerance_;
 
+      if (mppi_rescue_active_) {
+        const double rescue_elapsed = (this->now() - mppi_rescue_started_at_).seconds();
+        if (distance <= tolerance) {
+          cancel_mppi_rescue();
+          local_planner_.reset();
+          if (is_final) {
+            stop();
+            if (target_name != "charger_entry") {
+              rotate_to_node_yaw(target_name);
+            }
+            RCLCPP_INFO(this->get_logger(), "Reached %s with MPPI rescue", target_name.c_str());
+            return;
+          }
+          RCLCPP_INFO(this->get_logger(), "Passed waypoint %s with MPPI rescue", target_name.c_str());
+          reset_mppi_rescue_attempts();
+          ++target_index;
+          rate.sleep();
+          continue;
+        }
+
+        if (
+          rescue_elapsed >= mppi_rescue_min_handoff_seconds_ &&
+          mppi_rescue_handoff_is_clear(pose.value(), target, false))
+        {
+          RCLCPP_WARN(
+            this->get_logger(),
+            "MPPI rescue handoff after %.1f seconds; returning control to local A*",
+            rescue_elapsed);
+          cancel_mppi_rescue();
+          local_planner_.reset();
+        } else if (
+          rescue_elapsed >= mppi_rescue_slow_handoff_seconds_ &&
+          mppi_rescue_handoff_is_clear(pose.value(), target, true))
+        {
+          RCLCPP_WARN(
+            this->get_logger(),
+            "MPPI rescue slow handoff after %.1f seconds; returning control to local A*",
+            rescue_elapsed);
+          cancel_mppi_rescue();
+          local_planner_.reset();
+        } else if (rescue_elapsed > mppi_rescue_timeout_seconds_) {
+          RCLCPP_WARN(
+            this->get_logger(),
+            "MPPI rescue timed out after %.1f seconds; returning control to local A*",
+            rescue_elapsed);
+          cancel_mppi_rescue();
+          local_planner_.reset();
+        } else {
+          rate.sleep();
+          continue;
+        }
+      }
+
       if (
         enable_lidar_safety_ &&
         !is_final &&
@@ -290,6 +445,7 @@ private:
             target_name.c_str(),
             path[target_index + 1].c_str());
           local_planner_.reset();
+          reset_mppi_rescue_attempts();
           ++target_index;
           continue;
         }
@@ -308,6 +464,7 @@ private:
       if (!is_final && distance <= tolerance) {
         RCLCPP_INFO(this->get_logger(), "Passed waypoint %s", target_name.c_str());
         local_planner_.reset();
+        reset_mppi_rescue_attempts();
         ++target_index;
         continue;
       }
@@ -326,6 +483,53 @@ private:
           this->now());
       }
       if (enable_lidar_safety_ && local_plan.has_command) {
+        const bool stop_and_plan = local_plan.state == "stop_and_plan";
+        const bool side_escape = local_plan.state == "side_escape";
+        if (stop_and_plan && !mppi_stop_and_plan_active_) {
+          mppi_stop_and_plan_active_ = true;
+          mppi_stop_and_plan_started_at_ = this->now();
+        } else if (!stop_and_plan) {
+          mppi_stop_and_plan_active_ = false;
+        }
+        if (side_escape && !mppi_side_escape_active_) {
+          mppi_side_escape_active_ = true;
+          mppi_side_escape_started_at_ = this->now();
+        } else if (!side_escape) {
+          mppi_side_escape_active_ = false;
+        }
+
+        const bool stop_and_plan_timed_out =
+          mppi_stop_and_plan_active_ &&
+          (this->now() - mppi_stop_and_plan_started_at_).seconds() >=
+          mppi_rescue_stop_and_plan_seconds_;
+        const bool side_escape_timed_out =
+          mppi_side_escape_active_ &&
+          (this->now() - mppi_side_escape_started_at_).seconds() >=
+          mppi_rescue_side_escape_seconds_;
+        const auto corridor = evaluate_corridor_pass();
+        if (corridor.has_value() && corridor->hard_blocked) {
+          RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 1000,
+            "Corridor blocked: width=%.2f required=%.2f; holding position",
+            corridor->width,
+            corridor_min_passage_width_);
+          local_planner_.reset();
+          cmd_pub_->publish(geometry_msgs::msg::Twist{});
+          rate.sleep();
+          continue;
+        }
+
+        if (
+          enable_mppi_rescue_ &&
+          (local_plan.blocked || stop_and_plan_timed_out || side_escape_timed_out))
+        {
+          if (start_mppi_rescue(pose.value(), target, target_name, corridor)) {
+            mppi_stop_and_plan_active_ = false;
+            mppi_side_escape_active_ = false;
+            rate.sleep();
+            continue;
+          }
+        }
         RCLCPP_INFO_THROTTLE(
           this->get_logger(), *this->get_clock(), 1000,
           "Local A* Pure Pursuit active: %s",
@@ -393,6 +597,317 @@ private:
       node.type == "standby" || node.type == "waypoint";
   }
 
+  geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
+  {
+    geometry_msgs::msg::PoseStamped pose;
+    pose.header.frame_id = map_frame_;
+    pose.header.stamp = this->now();
+    pose.pose.position.x = x;
+    pose.pose.position.y = y;
+    pose.pose.orientation = quaternion_from_yaw(yaw);
+    return pose;
+  }
+
+  nav_msgs::msg::Path make_mppi_rescue_path(
+    const RobotPose2D & pose,
+    const MissionNode & target,
+    const std::optional<CorridorPassDecision> & corridor) const
+  {
+    nav_msgs::msg::Path path;
+    path.header.frame_id = map_frame_;
+    path.header.stamp = this->now();
+
+    const double distance = std::hypot(target.x - pose.x, target.y - pose.y);
+    const double target_heading = std::atan2(target.y - pose.y, target.x - pose.x);
+    double signed_lateral_offset{0.0};
+    double side{0.0};
+    bool corridor_path{false};
+    if (corridor.has_value() && corridor->passable) {
+      signed_lateral_offset = corridor->signed_lateral_offset;
+      side = signed_lateral_offset >= 0.0 ? 1.0 : -1.0;
+      corridor_path = true;
+    } else {
+      const double left_min = min_scan_range_in_sector(0.85, 0.65);
+      const double right_min = min_scan_range_in_sector(-0.85, 0.65);
+      side = choose_mppi_rescue_side(pose, target);
+      const double side_delta = std::isfinite(left_min) && std::isfinite(right_min) ?
+        std::abs(left_min - right_min) :
+        0.18;
+      const double adaptive_lateral_offset = clamp(0.12 + side_delta * 0.50, 0.16, 0.24);
+      double lateral_offset = std::min(
+        clamp(mppi_rescue_lateral_offset_, 0.16, 0.34),
+        adaptive_lateral_offset);
+      if (mppi_rescue_attempt_count_ >= 2) {
+        lateral_offset = std::max(lateral_offset, 0.24);
+      }
+      if (
+        std::abs(side - mppi_preferred_rescue_side_) < 0.1 &&
+        mppi_preferred_rescue_lateral_offset_ > 0.0)
+      {
+        lateral_offset = std::max(lateral_offset, mppi_preferred_rescue_lateral_offset_);
+      }
+      signed_lateral_offset = side * lateral_offset;
+    }
+    const double first_forward = clamp(
+      distance * 0.32,
+      0.55,
+      std::max(0.65, mppi_rescue_forward_offset_));
+    const double second_forward = clamp(distance * 0.62, 1.05, 1.55);
+    const double fade_forward = clamp(distance * 0.82, 1.25, 1.95);
+
+    const double fx = std::cos(target_heading);
+    const double fy = std::sin(target_heading);
+    const double lx = -std::sin(target_heading);
+    const double ly = std::cos(target_heading);
+
+    struct PathPoint
+    {
+      double x;
+      double y;
+      double yaw;
+    };
+
+    std::vector<PathPoint> control_points;
+    control_points.push_back({pose.x, pose.y, target_heading});
+    control_points.push_back({
+      pose.x + fx * first_forward + lx * signed_lateral_offset,
+      pose.y + fy * first_forward + ly * signed_lateral_offset,
+      target_heading});
+    control_points.push_back({
+      pose.x + fx * second_forward + lx * signed_lateral_offset,
+      pose.y + fy * second_forward + ly * signed_lateral_offset,
+      target_heading});
+
+    if (distance > 1.2) {
+      control_points.push_back({
+        pose.x + fx * fade_forward + lx * (signed_lateral_offset * 0.45),
+        pose.y + fy * fade_forward + ly * (signed_lateral_offset * 0.45),
+        target_heading});
+    }
+
+    control_points.push_back({target.x, target.y, target.yaw});
+
+    path.poses.push_back(make_pose_stamped(
+      control_points.front().x, control_points.front().y, control_points.front().yaw));
+    for (size_t i = 1; i < control_points.size(); ++i) {
+      const auto & from = control_points[i - 1];
+      const auto & to = control_points[i];
+      const double segment_distance = std::hypot(to.x - from.x, to.y - from.y);
+      const int segments = std::max(1, static_cast<int>(std::ceil(segment_distance / 0.18)));
+      const double segment_heading = segment_distance > 0.02 ?
+        std::atan2(to.y - from.y, to.x - from.x) :
+        to.yaw;
+      for (int j = 1; j <= segments; ++j) {
+        const double ratio = static_cast<double>(j) / static_cast<double>(segments);
+        path.poses.push_back(make_pose_stamped(
+          from.x + (to.x - from.x) * ratio,
+          from.y + (to.y - from.y) * ratio,
+          segment_heading));
+      }
+    }
+
+    RCLCPP_WARN(
+      this->get_logger(),
+      "MPPI rescue path: mode=%s side=%s lateral=%.2f distance=%.2f poses=%zu attempt=%d",
+      corridor_path ? "corridor" : "rescue",
+      side > 0.0 ? "left" : "right",
+      std::abs(signed_lateral_offset),
+      distance,
+      path.poses.size(),
+      mppi_rescue_attempt_count_);
+    last_mppi_rescue_side_ = side;
+    last_mppi_rescue_lateral_offset_ = std::abs(signed_lateral_offset);
+    return path;
+  }
+
+  double choose_mppi_rescue_side(
+    const RobotPose2D & pose,
+    const MissionNode & target) const
+  {
+    const double left_min = min_scan_range_in_sector(0.85, 0.65);
+    const double right_min = min_scan_range_in_sector(-0.85, 0.65);
+    if (std::isfinite(left_min) || std::isfinite(right_min)) {
+      const double nominal_side = left_min >= right_min ? 1.0 : -1.0;
+      const double side_delta =
+        std::isfinite(left_min) && std::isfinite(right_min) ?
+        std::abs(left_min - right_min) :
+        std::numeric_limits<double>::infinity();
+      if (mppi_preferred_rescue_side_ != 0.0 && mppi_rescue_attempt_count_ >= 1) {
+        return mppi_preferred_rescue_side_;
+      }
+      if (mppi_rescue_attempt_count_ >= 2 && side_delta < 0.12) {
+        return -nominal_side;
+      }
+      return nominal_side;
+    }
+
+    const double target_heading = std::atan2(target.y - pose.y, target.x - pose.x);
+    return normalize_angle(target_heading - pose.yaw) >= 0.0 ? 1.0 : -1.0;
+  }
+
+  double min_scan_range_in_sector(double center_angle, double sector_width) const
+  {
+    if (!last_scan_.has_value() || last_scan_->ranges.empty()) {
+      return std::numeric_limits<double>::infinity();
+    }
+
+    double min_range = std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i < last_scan_->ranges.size(); ++i) {
+      const float range = last_scan_->ranges[i];
+      if (!std::isfinite(range) || range < last_scan_->range_min || range > last_scan_->range_max) {
+        continue;
+      }
+      const double angle = last_scan_->angle_min + static_cast<double>(i) * last_scan_->angle_increment;
+      if (std::abs(normalize_angle(angle - center_angle)) <= sector_width * 0.5) {
+        min_range = std::min(min_range, static_cast<double>(range));
+      }
+    }
+    return min_range;
+  }
+
+  std::optional<CorridorPassDecision> evaluate_corridor_pass() const
+  {
+    if (!enable_corridor_pass_ || !last_scan_.has_value()) {
+      return std::nullopt;
+    }
+
+    CorridorPassDecision decision;
+    decision.left_min = min_scan_range_in_sector(0.85, 0.65);
+    decision.right_min = min_scan_range_in_sector(-0.85, 0.65);
+    if (!std::isfinite(decision.left_min) || !std::isfinite(decision.right_min)) {
+      return std::nullopt;
+    }
+
+    decision.width = decision.left_min + decision.right_min;
+    const double side_min = std::min(decision.left_min, decision.right_min);
+    decision.hard_blocked =
+      decision.width < corridor_hard_stop_width_ ||
+      side_min < corridor_side_clearance_ + 0.12;
+    decision.passable =
+      !decision.hard_blocked &&
+      decision.width >= corridor_min_passage_width_;
+    if (decision.passable) {
+      decision.signed_lateral_offset = clamp(
+        (decision.left_min - decision.right_min) * 0.5,
+        -corridor_max_lateral_offset_,
+        corridor_max_lateral_offset_);
+    }
+    return decision;
+  }
+
+  bool mppi_rescue_handoff_is_clear(
+    const RobotPose2D & pose,
+    const MissionNode & target,
+    bool allow_slow_handoff) const
+  {
+    const double front_min = min_scan_range_in_sector(0.0, 0.52);
+    const double front_left_min = min_scan_range_in_sector(0.55, 0.45);
+    const double front_right_min = min_scan_range_in_sector(-0.55, 0.45);
+    const double target_heading = std::atan2(target.y - pose.y, target.x - pose.x);
+    const double heading_error = std::abs(normalize_angle(target_heading - pose.yaw));
+    const double required_front_clearance = allow_slow_handoff ?
+      mppi_rescue_slow_handoff_front_clearance_ :
+      mppi_rescue_handoff_front_clearance_;
+    const double required_side_clearance = allow_slow_handoff ?
+      std::max(0.26, mppi_rescue_handoff_side_clearance_ - 0.04) :
+      mppi_rescue_handoff_side_clearance_;
+    const double required_heading_error = allow_slow_handoff ? 1.15 : 0.85;
+
+    const bool front_clear =
+      std::isfinite(front_min) &&
+      front_min >= required_front_clearance;
+    const bool side_clear =
+      (!std::isfinite(front_left_min) || front_left_min >= required_side_clearance) &&
+      (!std::isfinite(front_right_min) || front_right_min >= required_side_clearance);
+    return front_clear && side_clear && heading_error <= required_heading_error;
+  }
+
+  bool start_mppi_rescue(
+    const RobotPose2D & pose,
+    const MissionNode & target,
+    const std::string & target_name,
+    const std::optional<CorridorPassDecision> & corridor)
+  {
+    if (!mppi_follow_path_client_->wait_for_action_server(0s)) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 2000,
+        "MPPI rescue requested, but FollowPath action server is not available");
+      return false;
+    }
+
+    if (target_name != mppi_rescue_attempt_target_) {
+      mppi_rescue_attempt_target_ = target_name;
+      mppi_rescue_attempt_count_ = 0;
+    }
+    ++mppi_rescue_attempt_count_;
+
+    FollowPath::Goal goal;
+    goal.path = make_mppi_rescue_path(pose, target, corridor);
+    goal.controller_id = "FollowPath";
+    goal.goal_checker_id = "general_goal_checker";
+    const int64_t goal_id = ++mppi_rescue_goal_id_;
+    mppi_active_goal_id_ = goal_id;
+
+    rclcpp_action::Client<FollowPath>::SendGoalOptions options;
+    options.goal_response_callback =
+      [this, target_name, goal_id](FollowPathGoalHandle::SharedPtr goal_handle) {
+        if (goal_id != mppi_active_goal_id_) {
+          return;
+        }
+        if (!goal_handle) {
+          mppi_rescue_active_ = false;
+          mppi_active_goal_id_ = 0;
+          RCLCPP_WARN(this->get_logger(), "MPPI rescue goal to %s was rejected", target_name.c_str());
+          return;
+        }
+        mppi_goal_handle_ = goal_handle;
+        RCLCPP_WARN(this->get_logger(), "MPPI rescue active toward %s", target_name.c_str());
+      };
+    options.result_callback =
+      [this, target_name, goal_id](const FollowPathGoalHandle::WrappedResult & result) {
+        if (goal_id != mppi_active_goal_id_) {
+          return;
+        }
+        mppi_rescue_active_ = false;
+        mppi_active_goal_id_ = 0;
+        mppi_goal_handle_.reset();
+        if (result.code == rclcpp_action::ResultCode::SUCCEEDED) {
+          RCLCPP_INFO(this->get_logger(), "MPPI rescue finished toward %s", target_name.c_str());
+        } else {
+          RCLCPP_WARN(this->get_logger(), "MPPI rescue ended before reaching %s", target_name.c_str());
+        }
+      };
+
+    mppi_rescue_active_ = true;
+    mppi_rescue_started_at_ = this->now();
+    mppi_follow_path_client_->async_send_goal(goal, options);
+    return true;
+  }
+
+  void cancel_mppi_rescue()
+  {
+    if (mppi_goal_handle_) {
+      mppi_follow_path_client_->async_cancel_goal(mppi_goal_handle_);
+    }
+    mppi_goal_handle_.reset();
+    mppi_rescue_active_ = false;
+    mppi_active_goal_id_ = 0;
+  }
+
+  void reset_mppi_rescue_attempts()
+  {
+    if (mppi_rescue_attempt_count_ > 0 && last_mppi_rescue_side_ != 0.0) {
+      mppi_preferred_rescue_side_ = last_mppi_rescue_side_;
+      mppi_preferred_rescue_lateral_offset_ = std::max(
+        last_mppi_rescue_lateral_offset_,
+        0.24);
+    }
+    mppi_rescue_attempt_target_.clear();
+    mppi_rescue_attempt_count_ = 0;
+    last_mppi_rescue_side_ = 0.0;
+    last_mppi_rescue_lateral_offset_ = 0.0;
+  }
+
   void return_to_loading(const std::vector<std::string> & path)
   {
     go_path(path);
@@ -439,6 +954,7 @@ private:
       msg->header.stamp.sec == 0 && msg->header.stamp.nanosec == 0 ?
       this->now() :
       rclcpp::Time(msg->header.stamp);
+    last_scan_ = *msg;
     local_planner_.update_scan(*msg, stamp);
   }
 
@@ -683,6 +1199,9 @@ private:
 
   void wait_stopped(const std::string & label, double seconds)
   {
+    if (!rclcpp::ok()) {
+      return;
+    }
     stop();
     RCLCPP_INFO(this->get_logger(), "Waiting at %s for %.1f seconds", label.c_str(), seconds);
     const auto end_time = this->now() + rclcpp::Duration::from_seconds(seconds);
@@ -815,13 +1334,47 @@ private:
   double dock_parking_lateral_offset_{0.15};
   double dock_linear_gain_{0.30};
   double dock_angular_gain_{0.8};
+  double mppi_rescue_timeout_seconds_{18.0};
+  double mppi_rescue_stop_and_plan_seconds_{3.0};
+  double mppi_rescue_lateral_offset_{0.24};
+  double mppi_rescue_forward_offset_{0.85};
+  double mppi_rescue_min_handoff_seconds_{5.0};
+  double mppi_rescue_handoff_front_clearance_{0.48};
+  double mppi_rescue_handoff_side_clearance_{0.30};
+  double mppi_rescue_slow_handoff_seconds_{8.0};
+  double mppi_rescue_slow_handoff_front_clearance_{0.38};
+  double mppi_rescue_side_escape_seconds_{3.0};
+  double corridor_robot_width_{0.306};
+  double corridor_side_clearance_{0.07};
+  double corridor_min_passage_width_{0.45};
+  double corridor_hard_stop_width_{0.40};
+  double corridor_max_lateral_offset_{0.24};
   bool enable_lidar_safety_{true};
+  bool enable_mppi_rescue_{true};
+  bool enable_corridor_pass_{true};
+  bool mppi_rescue_active_{false};
+  bool mppi_stop_and_plan_active_{false};
+  bool mppi_side_escape_active_{false};
   bool charger_parking_requested_{false};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
+  rclcpp_action::Client<FollowPath>::SharedPtr mppi_follow_path_client_;
+  FollowPathGoalHandle::SharedPtr mppi_goal_handle_;
+  rclcpp::Time mppi_rescue_started_at_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time mppi_stop_and_plan_started_at_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time mppi_side_escape_started_at_{0, 0, RCL_ROS_TIME};
+  int64_t mppi_rescue_goal_id_{0};
+  int64_t mppi_active_goal_id_{0};
+  std::string mppi_rescue_attempt_target_;
+  int mppi_rescue_attempt_count_{0};
+  mutable double last_mppi_rescue_side_{0.0};
+  mutable double last_mppi_rescue_lateral_offset_{0.0};
+  double mppi_preferred_rescue_side_{0.0};
+  double mppi_preferred_rescue_lateral_offset_{0.0};
+  std::optional<sensor_msgs::msg::LaserScan> last_scan_;
   amr_topology::LocalAStarPurePursuit local_planner_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
