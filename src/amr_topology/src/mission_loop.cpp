@@ -19,6 +19,8 @@
 #include <std_msgs/msg/string.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <turtlebot3_msgs/msg/sound.hpp>
+#include <turtlebot3_msgs/srv/sound.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include "amr_topology/local_astar_pure_pursuit.hpp"
@@ -100,6 +102,8 @@ public:
     this->declare_parameter<std::string>("map_frame", "map");
     this->declare_parameter<std::string>("base_frame", "base_footprint");
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    this->declare_parameter<std::string>("sound_topic", "/sound");
+    this->declare_parameter<std::string>("sound_service", "/sound");
     this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<bool>("enable_lidar_safety", true);
@@ -166,6 +170,8 @@ public:
     this->declare_parameter<double>("corridor_min_passage_width", 0.45);
     this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
     this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
+    this->declare_parameter<double>("blocked_target_beep_period", 1.0);
+    this->declare_parameter<int>("blocked_target_sound_value", 1);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -227,6 +233,10 @@ public:
       this->get_parameter("corridor_hard_stop_width").as_double();
     corridor_max_lateral_offset_ =
       this->get_parameter("corridor_max_lateral_offset").as_double();
+    blocked_target_beep_period_ =
+      this->get_parameter("blocked_target_beep_period").as_double();
+    blocked_target_sound_value_ =
+      this->get_parameter("blocked_target_sound_value").as_int();
 
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
@@ -273,6 +283,10 @@ public:
 
     cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       this->get_parameter("cmd_vel_topic").as_string(), 10);
+    sound_pub_ = this->create_publisher<turtlebot3_msgs::msg::Sound>(
+      this->get_parameter("sound_topic").as_string(), 10);
+    sound_client_ = this->create_client<turtlebot3_msgs::srv::Sound>(
+      this->get_parameter("sound_service").as_string());
     mppi_follow_path_client_ = rclcpp_action::create_client<FollowPath>(
       this,
       this->get_parameter("mppi_follow_path_action").as_string());
@@ -427,7 +441,7 @@ private:
       if (
         enable_lidar_safety_ &&
         !is_final &&
-        is_skippable_node(target) &&
+        is_skippable_node(target_name, target) &&
         local_planner_.target_is_blocked(
           amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
           amr_topology::Target2D{target.x, target.y},
@@ -449,6 +463,20 @@ private:
           ++target_index;
           continue;
         }
+      }
+
+      if (
+        enable_lidar_safety_ &&
+        is_blocking_target_node(target_name) &&
+        local_planner_.target_is_blocked(
+          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
+          amr_topology::Target2D{target.x, target.y},
+          this->now()))
+      {
+        wait_for_blocked_target_clear(target_name, target);
+        local_planner_.reset();
+        rate.sleep();
+        continue;
       }
 
       if (is_final && distance <= tolerance) {
@@ -591,10 +619,22 @@ private:
     return node_name == "a_entry" || node_name == "b_entry";
   }
 
-  bool is_skippable_node(const MissionNode & node) const
+  bool is_skippable_node(const std::string & node_name, const MissionNode & node) const
   {
+    if (
+      node_name == "intersection_1" || node_name == "intersection_2" ||
+      node_name == "a_entry" || node_name == "b_entry")
+    {
+      return true;
+    }
     return node.type == "intersection" || node.type == "area_entry" ||
       node.type == "standby" || node.type == "waypoint";
+  }
+
+  bool is_blocking_target_node(const std::string & node_name) const
+  {
+    return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
+      node_name == "a_leader_slot_precision" || node_name == "b_leader_slot_precision";
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
@@ -963,6 +1003,72 @@ private:
     local_planner_.update_map(*msg);
   }
 
+  void publish_blocked_beep()
+  {
+    const auto sound_value = static_cast<uint8_t>(clamp(
+      static_cast<double>(blocked_target_sound_value_),
+      static_cast<double>(turtlebot3_msgs::msg::Sound::OFF),
+      static_cast<double>(turtlebot3_msgs::msg::Sound::BUTTON2)));
+
+    turtlebot3_msgs::msg::Sound sound;
+    sound.value = sound_value;
+    sound_pub_->publish(sound);
+
+    if (sound_client_->service_is_ready()) {
+      auto request = std::make_shared<turtlebot3_msgs::srv::Sound::Request>();
+      request->value = sound_value;
+      sound_client_->async_send_request(request);
+    }
+
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 2000,
+      "Publishing blocked target beep value=%d",
+      static_cast<int>(sound_value));
+  }
+
+  void wait_for_blocked_target_clear(
+    const std::string & target_name,
+    const MissionNode & target)
+  {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Task target %s is blocked; stopping and beeping until the obstacle is cleared",
+      target_name.c_str());
+    stop();
+
+    rclcpp::Time last_beep{0, 0, RCL_ROS_TIME};
+    rclcpp::Rate rate(10.0);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      stop();
+
+      const auto pose = lookup_robot_pose();
+      if (pose.has_value()) {
+        const bool still_blocked = local_planner_.target_is_blocked(
+          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
+          amr_topology::Target2D{target.x, target.y},
+          this->now());
+        if (!still_blocked) {
+          RCLCPP_INFO(
+            this->get_logger(),
+            "Task target %s is clear; resuming mission",
+            target_name.c_str());
+          return;
+        }
+      }
+
+      if (
+        last_beep.nanoseconds() == 0 ||
+        (this->now() - last_beep).seconds() >= blocked_target_beep_period_)
+      {
+        publish_blocked_beep();
+        last_beep = this->now();
+      }
+
+      rate.sleep();
+    }
+  }
+
   void run_precision_slot_mission(
     const std::string & slot_name,
     const std::string & precision_node_name,
@@ -998,6 +1104,19 @@ private:
         stop();
         RCLCPP_INFO(this->get_logger(), "Reached %s precisely", target_node_name.c_str());
         return;
+      }
+
+      if (
+        enable_lidar_safety_ &&
+        is_blocking_target_node(target_node_name) &&
+        local_planner_.target_is_blocked(
+          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
+          amr_topology::Target2D{target.x, target.y},
+          this->now()))
+      {
+        wait_for_blocked_target_clear(target_node_name, target);
+        rate.sleep();
+        continue;
       }
 
       cmd_pub_->publish(make_drive_command(pose.value(), target, true));
@@ -1349,6 +1468,8 @@ private:
   double corridor_min_passage_width_{0.45};
   double corridor_hard_stop_width_{0.40};
   double corridor_max_lateral_offset_{0.24};
+  double blocked_target_beep_period_{1.0};
+  int blocked_target_sound_value_{1};
   bool enable_lidar_safety_{true};
   bool enable_mppi_rescue_{true};
   bool enable_corridor_pass_{true};
@@ -1358,6 +1479,8 @@ private:
   bool charger_parking_requested_{false};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
+  rclcpp::Publisher<turtlebot3_msgs::msg::Sound>::SharedPtr sound_pub_;
+  rclcpp::Client<turtlebot3_msgs::srv::Sound>::SharedPtr sound_client_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;

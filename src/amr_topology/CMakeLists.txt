@@ -15,6 +15,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(turtlebot3_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 add_executable(topology_follower src/topology_follower.cpp)
@@ -50,6 +51,7 @@ ament_target_dependencies(
   sensor_msgs
   std_msgs
   tf2_ros
+  turtlebot3_msgs
 )
 target_link_libraries(mission_loop yaml-cpp)
 
