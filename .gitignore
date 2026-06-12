@@ -2,6 +2,7 @@ build/
 install/
 log/
 rosbag/
+charger_docking_debug/
 
 .colcon/
 *.pyc

@@ -15,7 +15,6 @@ find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(turtlebot3_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 add_executable(topology_follower src/topology_follower.cpp)
@@ -51,13 +50,23 @@ ament_target_dependencies(
   sensor_msgs
   std_msgs
   tf2_ros
-  turtlebot3_msgs
 )
 target_link_libraries(mission_loop yaml-cpp)
+
+add_executable(rc_car_follower_node src/rc_car_follower_node.cpp)
+target_compile_features(rc_car_follower_node PUBLIC cxx_std_17)
+ament_target_dependencies(
+  rc_car_follower_node
+  geometry_msgs
+  nav_msgs
+  rclcpp
+  std_msgs
+)
 
 install(TARGETS
   topology_follower
   mission_loop
+  rc_car_follower_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -66,6 +75,7 @@ install(DIRECTORY
   include
   launch
   maps
+  rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
