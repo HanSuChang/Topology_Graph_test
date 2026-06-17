@@ -168,6 +168,7 @@ public:
     this->declare_parameter<double>("corridor_min_passage_width", 0.45);
     this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
     this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
+    this->declare_parameter<double>("rc_car_intersection_1_prepare_distance", 0.85);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -229,6 +230,8 @@ public:
       this->get_parameter("corridor_hard_stop_width").as_double();
     corridor_max_lateral_offset_ =
       this->get_parameter("corridor_max_lateral_offset").as_double();
+    rc_car_intersection_1_prepare_distance_ =
+      this->get_parameter("rc_car_intersection_1_prepare_distance").as_double();
 
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
@@ -388,6 +391,7 @@ private:
       const auto & target = nodes_.at(target_name);
       const double distance = distance_to_target(pose.value(), target);
       const double tolerance = is_final ? goal_tolerance_ : waypoint_tolerance_;
+      update_rc_car_intersection_1_prepare(target_name, distance);
 
       if (mppi_rescue_active_) {
         const double rescue_elapsed = (this->now() - mppi_rescue_started_at_).seconds();
@@ -619,6 +623,24 @@ private:
     }
     return node.type == "intersection" || node.type == "area_entry" ||
       node.type == "standby" || node.type == "waypoint";
+  }
+
+  void update_rc_car_intersection_1_prepare(
+    const std::string & target_name,
+    double distance)
+  {
+    if (last_rc_car_mode_ != "follow" && last_rc_car_mode_ != "turn_prepare_left") {
+      return;
+    }
+
+    if (target_name == "intersection_1" && distance <= rc_car_intersection_1_prepare_distance_) {
+      publish_rc_car_mode("turn_prepare_left");
+      return;
+    }
+
+    if (last_rc_car_mode_ == "turn_prepare_left") {
+      publish_rc_car_mode("follow");
+    }
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
@@ -1412,6 +1434,7 @@ private:
   double corridor_min_passage_width_{0.45};
   double corridor_hard_stop_width_{0.40};
   double corridor_max_lateral_offset_{0.24};
+  double rc_car_intersection_1_prepare_distance_{0.85};
   bool enable_lidar_safety_{true};
   bool enable_mppi_rescue_{true};
   bool enable_corridor_pass_{true};
