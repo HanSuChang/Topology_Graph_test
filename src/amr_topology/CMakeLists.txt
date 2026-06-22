@@ -15,6 +15,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 add_executable(topology_follower src/topology_follower.cpp)
@@ -28,6 +29,18 @@ ament_target_dependencies(
   tf2_ros
 )
 target_link_libraries(topology_follower yaml-cpp)
+
+add_executable(topology_marker_node src/topology_marker_node.cpp)
+target_compile_features(topology_marker_node PUBLIC cxx_std_17)
+ament_target_dependencies(
+  topology_marker_node
+  ament_index_cpp
+  geometry_msgs
+  rclcpp
+  std_msgs
+  visualization_msgs
+)
+target_link_libraries(topology_marker_node yaml-cpp)
 
 add_executable(
   mission_loop
@@ -57,14 +70,17 @@ add_executable(rc_car_follower_node src/rc_car_follower_node.cpp)
 target_compile_features(rc_car_follower_node PUBLIC cxx_std_17)
 ament_target_dependencies(
   rc_car_follower_node
+  ament_index_cpp
   geometry_msgs
   nav_msgs
   rclcpp
   std_msgs
 )
+target_link_libraries(rc_car_follower_node yaml-cpp)
 
 install(TARGETS
   topology_follower
+  topology_marker_node
   mission_loop
   rc_car_follower_node
   DESTINATION lib/${PROJECT_NAME}

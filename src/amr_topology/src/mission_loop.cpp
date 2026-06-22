@@ -102,10 +102,11 @@ public:
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
     this->declare_parameter<std::string>("leader_pose_topic", "/turtlebot/pose");
     this->declare_parameter<std::string>("rc_car_mode_topic", "/rc_car/follower_mode");
+    this->declare_parameter<std::string>("rc_car_slot_status_topic", "/rc_car/slot_wait_status");
     this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<bool>("enable_lidar_safety", true);
-    this->declare_parameter<int>("repeat_count", 1);
+    this->declare_parameter<int>("repeat_count", 2);
     this->declare_parameter<double>("wait_seconds", 3.0);
     this->declare_parameter<double>("precision_wait_seconds", 5.0);
     this->declare_parameter<double>("goal_tolerance", 0.08);
@@ -168,7 +169,6 @@ public:
     this->declare_parameter<double>("corridor_min_passage_width", 0.45);
     this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
     this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
-    this->declare_parameter<double>("rc_car_intersection_1_prepare_distance", 0.85);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -230,8 +230,6 @@ public:
       this->get_parameter("corridor_hard_stop_width").as_double();
     corridor_max_lateral_offset_ =
       this->get_parameter("corridor_max_lateral_offset").as_double();
-    rc_car_intersection_1_prepare_distance_ =
-      this->get_parameter("rc_car_intersection_1_prepare_distance").as_double();
 
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
@@ -283,6 +281,10 @@ public:
     rc_car_mode_pub_ = this->create_publisher<std_msgs::msg::String>(
       this->get_parameter("rc_car_mode_topic").as_string(),
       rclcpp::QoS(1).reliable().transient_local());
+    rc_car_slot_status_sub_ = this->create_subscription<std_msgs::msg::String>(
+      this->get_parameter("rc_car_slot_status_topic").as_string(),
+      10,
+      std::bind(&MissionLoop::handle_rc_car_slot_status, this, std::placeholders::_1));
     rc_car_mode_timer_ = this->create_wall_timer(
       500ms, std::bind(&MissionLoop::republish_rc_car_mode, this));
     mppi_follow_path_client_ = rclcpp_action::create_client<FollowPath>(
@@ -322,12 +324,7 @@ public:
         return;
       }
       publish_rc_car_mode("stop");
-      run_precision_slot_mission("A", "a_leader_slot_precision", "a_entry");
-      if (!rclcpp::ok()) {
-        return;
-      }
-      publish_rc_car_mode("return");
-      return_to_loading({"a_leader_slot_precision", "a_entry", "intersection_1", "loading"});
+      hold_at_leader_slot("A leader slot");
       if (!rclcpp::ok()) {
         return;
       }
@@ -344,12 +341,7 @@ public:
         return;
       }
       publish_rc_car_mode("stop");
-      run_precision_slot_mission("B", "b_leader_slot_precision", "b_entry");
-      if (!rclcpp::ok()) {
-        return;
-      }
-      publish_rc_car_mode("return");
-      return_to_loading({"b_leader_slot_precision", "b_entry", "intersection_2", "loading"});
+      hold_at_leader_slot("B leader slot");
     }
 
     publish_rc_car_mode("stop");
@@ -391,7 +383,6 @@ private:
       const auto & target = nodes_.at(target_name);
       const double distance = distance_to_target(pose.value(), target);
       const double tolerance = is_final ? goal_tolerance_ : waypoint_tolerance_;
-      update_rc_car_intersection_1_prepare(target_name, distance);
 
       if (mppi_rescue_active_) {
         const double rescue_elapsed = (this->now() - mppi_rescue_started_at_).seconds();
@@ -471,6 +462,20 @@ private:
           ++target_index;
           continue;
         }
+      }
+
+      if (
+        enable_lidar_safety_ &&
+        is_blocking_target_node(target_name) &&
+        local_planner_.target_is_blocked(
+          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
+          amr_topology::Target2D{target.x, target.y},
+          this->now()))
+      {
+        wait_for_blocked_target_clear(target_name, target);
+        local_planner_.reset();
+        rate.sleep();
+        continue;
       }
 
       if (is_final && distance <= tolerance) {
@@ -625,22 +630,10 @@ private:
       node.type == "standby" || node.type == "waypoint";
   }
 
-  void update_rc_car_intersection_1_prepare(
-    const std::string & target_name,
-    double distance)
+  bool is_blocking_target_node(const std::string & node_name) const
   {
-    if (last_rc_car_mode_ != "follow" && last_rc_car_mode_ != "turn_prepare_left") {
-      return;
-    }
-
-    if (target_name == "intersection_1" && distance <= rc_car_intersection_1_prepare_distance_) {
-      publish_rc_car_mode("turn_prepare_left");
-      return;
-    }
-
-    if (last_rc_car_mode_ == "turn_prepare_left") {
-      publish_rc_car_mode("follow");
-    }
+    return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
+      node_name == "a_leader_slot_precision" || node_name == "b_leader_slot_precision";
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
@@ -998,6 +991,11 @@ private:
     }
   }
 
+  void handle_rc_car_slot_status(const std_msgs::msg::String::SharedPtr msg)
+  {
+    last_rc_car_slot_status_ = msg->data;
+  }
+
   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     const rclcpp::Time stamp =
@@ -1013,44 +1011,36 @@ private:
     local_planner_.update_map(*msg);
   }
 
-  void run_precision_slot_mission(
-    const std::string & slot_name,
-    const std::string & precision_node_name,
-    const std::string & exit_node_name)
+  void wait_for_blocked_target_clear(
+    const std::string & target_name,
+    const MissionNode & target)
   {
-    RCLCPP_INFO(
+    RCLCPP_WARN(
       this->get_logger(),
-      "Moving to %s precision slot %s",
-      slot_name.c_str(),
-      precision_node_name.c_str());
+      "Task target %s is blocked; stopping until the obstacle is cleared",
+      target_name.c_str());
+    stop();
 
-    go_to_precision_slot(precision_node_name);
-    rotate_to_node_yaw(precision_node_name);
-    wait_stopped(slot_name + " precision slot", precision_wait_seconds_);
-    rotate_to_face(exit_node_name);
-  }
-
-  void go_to_precision_slot(const std::string & target_node_name)
-  {
-    const auto & target = nodes_.at(target_node_name);
-    rclcpp::Rate rate(20.0);
-
+    rclcpp::Rate rate(10.0);
     while (rclcpp::ok()) {
       rclcpp::spin_some(this->get_node_base_interface());
+      stop();
+
       const auto pose = lookup_robot_pose();
-      if (!pose.has_value()) {
-        rate.sleep();
-        continue;
+      if (pose.has_value()) {
+        const bool still_blocked = local_planner_.target_is_blocked(
+          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
+          amr_topology::Target2D{target.x, target.y},
+          this->now());
+        if (!still_blocked) {
+          RCLCPP_INFO(
+            this->get_logger(),
+            "Task target %s is clear; resuming mission",
+            target_name.c_str());
+          return;
+        }
       }
 
-      const double distance = distance_to_target(pose.value(), target);
-      if (distance <= precision_goal_tolerance_) {
-        stop();
-        RCLCPP_INFO(this->get_logger(), "Reached %s precisely", target_node_name.c_str());
-        return;
-      }
-
-      cmd_pub_->publish(make_drive_command(pose.value(), target, true));
       rate.sleep();
     }
   }
@@ -1248,6 +1238,51 @@ private:
     rotate_to_face(exit_node_name);
   }
 
+  void wait_at_slot_for_rc_car(
+    const std::string & slot_name,
+    const std::string & exit_node_name,
+    const std::string & slot_key)
+  {
+    if (!rclcpp::ok()) {
+      return;
+    }
+
+    rotate_to_face(exit_node_name);
+    stop();
+
+    const std::string arrived_status = slot_key + "_arrived";
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Waiting at %s until RC car reports %s",
+      slot_name.c_str(),
+      arrived_status.c_str());
+
+    while (rclcpp::ok() && last_rc_car_slot_status_ != arrived_status) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      stop();
+      rclcpp::sleep_for(100ms);
+    }
+
+    stop();
+    RCLCPP_INFO(
+      this->get_logger(),
+      "RC car reached %s staging point; holding at leader slot",
+      slot_name.c_str());
+  }
+
+  void hold_at_leader_slot(const std::string & label)
+  {
+    stop();
+    RCLCPP_INFO(this->get_logger(), "Holding at %s until shutdown", label.c_str());
+
+    rclcpp::Rate rate(10.0);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      stop();
+      rate.sleep();
+    }
+  }
+
   void wait_stopped(const std::string & label, double seconds)
   {
     if (!rclcpp::ok()) {
@@ -1374,6 +1409,10 @@ private:
       return;
     }
 
+    if (mode == "slot_wait_a" || mode == "slot_wait_b") {
+      last_rc_car_slot_status_.clear();
+    }
+
     std_msgs::msg::String msg;
     msg.data = mode;
     rc_car_mode_pub_->publish(msg);
@@ -1396,7 +1435,7 @@ private:
   std::string base_frame_;
   std::unordered_map<std::string, MissionNode> nodes_;
 
-  int repeat_count_{1};
+  int repeat_count_{2};
   double wait_seconds_{3.0};
   double precision_wait_seconds_{5.0};
   double goal_tolerance_{0.08};
@@ -1434,7 +1473,6 @@ private:
   double corridor_min_passage_width_{0.45};
   double corridor_hard_stop_width_{0.40};
   double corridor_max_lateral_offset_{0.24};
-  double rc_car_intersection_1_prepare_distance_{0.85};
   bool enable_lidar_safety_{true};
   bool enable_mppi_rescue_{true};
   bool enable_corridor_pass_{true};
@@ -1443,12 +1481,14 @@ private:
   bool mppi_side_escape_active_{false};
   bool charger_parking_requested_{false};
   std::string last_rc_car_mode_;
+  std::string last_rc_car_slot_status_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr rc_car_mode_pub_;
   rclcpp::TimerBase::SharedPtr rc_car_mode_timer_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr rc_car_slot_status_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   rclcpp_action::Client<FollowPath>::SharedPtr mppi_follow_path_client_;

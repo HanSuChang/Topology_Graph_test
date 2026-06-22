@@ -37,6 +37,31 @@ def generate_launch_description():
         default_value=default_rviz_config,
         description='Full path to the RViz config file',
     )
+    rc_start_x_arg = DeclareLaunchArgument(
+        'rc_start_x',
+        default_value='2.471',
+        description='RC car start marker x coordinate in map frame',
+    )
+    rc_start_y_arg = DeclareLaunchArgument(
+        'rc_start_y',
+        default_value='-3.05',
+        description='RC car start marker y coordinate in map frame',
+    )
+    rc_a_stop_x_arg = DeclareLaunchArgument(
+        'rc_a_stop_x',
+        default_value='0.7064711451530457',
+        description='RC car A slot stop marker x coordinate in map frame',
+    )
+    rc_a_stop_y_arg = DeclareLaunchArgument(
+        'rc_a_stop_y',
+        default_value='0.29016929864883423',
+        description='RC car A slot stop marker y coordinate in map frame',
+    )
+    marker_radius_arg = DeclareLaunchArgument(
+        'marker_radius',
+        default_value='0.08',
+        description='Topology marker circle diameter in meters',
+    )
 
     map_server = Node(
         package='nav2_map_server',
@@ -75,12 +100,38 @@ def generate_launch_description():
         arguments=['-d', LaunchConfiguration('rviz_config')],
     )
 
+    topology_markers = Node(
+        package='amr_topology',
+        executable='topology_marker_node',
+        name='topology_marker_node',
+        output='screen',
+        parameters=[{
+            'topology_file': PathJoinSubstitution([
+                FindPackageShare('amr_topology'),
+                'config',
+                'topology.yaml',
+            ]),
+            'frame_id': 'map',
+            'rc_start_x': LaunchConfiguration('rc_start_x'),
+            'rc_start_y': LaunchConfiguration('rc_start_y'),
+            'rc_a_stop_x': LaunchConfiguration('rc_a_stop_x'),
+            'rc_a_stop_y': LaunchConfiguration('rc_a_stop_y'),
+            'marker_radius': LaunchConfiguration('marker_radius'),
+        }],
+    )
+
     return LaunchDescription([
         map_arg,
         amcl_params_arg,
         rviz_config_arg,
+        rc_start_x_arg,
+        rc_start_y_arg,
+        rc_a_stop_x_arg,
+        rc_a_stop_y_arg,
+        marker_radius_arg,
         map_server,
         amcl,
         lifecycle_manager,
+        topology_markers,
         rviz,
     ])
