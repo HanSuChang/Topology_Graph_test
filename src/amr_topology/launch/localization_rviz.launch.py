@@ -49,13 +49,23 @@ def generate_launch_description():
     )
     rc_a_stop_x_arg = DeclareLaunchArgument(
         'rc_a_stop_x',
-        default_value='0.2519901692867279',
+        default_value='0.4779384434223175',
         description='RC car A slot stop marker x coordinate in map frame',
     )
     rc_a_stop_y_arg = DeclareLaunchArgument(
         'rc_a_stop_y',
-        default_value='0.28689199686050415',
+        default_value='0.28734058141708374',
         description='RC car A slot stop marker y coordinate in map frame',
+    )
+    rc_direct_a_stop_trigger_x_arg = DeclareLaunchArgument(
+        'rc_direct_a_stop_trigger_x',
+        default_value='0.774304094708256',
+        description='RC car direct A-stop trigger marker x coordinate in map frame',
+    )
+    rc_direct_a_stop_trigger_y_arg = DeclareLaunchArgument(
+        'rc_direct_a_stop_trigger_y',
+        default_value='0.28734058141708374',
+        description='RC car direct A-stop trigger marker y coordinate in map frame',
     )
     marker_radius_arg = DeclareLaunchArgument(
         'marker_radius',
@@ -116,6 +126,8 @@ def generate_launch_description():
             'rc_start_y': LaunchConfiguration('rc_start_y'),
             'rc_a_stop_x': LaunchConfiguration('rc_a_stop_x'),
             'rc_a_stop_y': LaunchConfiguration('rc_a_stop_y'),
+            'rc_direct_a_stop_trigger_x': LaunchConfiguration('rc_direct_a_stop_trigger_x'),
+            'rc_direct_a_stop_trigger_y': LaunchConfiguration('rc_direct_a_stop_trigger_y'),
             'marker_radius': LaunchConfiguration('marker_radius'),
         }],
     )
@@ -128,6 +140,8 @@ def generate_launch_description():
         rc_start_y_arg,
         rc_a_stop_x_arg,
         rc_a_stop_y_arg,
+        rc_direct_a_stop_trigger_x_arg,
+        rc_direct_a_stop_trigger_y_arg,
         marker_radius_arg,
         map_server,
         amcl,

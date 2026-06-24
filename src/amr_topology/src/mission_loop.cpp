@@ -615,7 +615,7 @@ private:
   bool is_leader_slot(const std::string & node_name) const
   {
     return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
-      node_name == "a_leader_slot_precision" || node_name == "b_leader_slot_precision";
+      node_name == "b_leader_slot_precision";
   }
 
   bool is_entry_node(const std::string & node_name) const
@@ -638,7 +638,7 @@ private:
   bool is_blocking_target_node(const std::string & node_name) const
   {
     return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
-      node_name == "a_leader_slot_precision" || node_name == "b_leader_slot_precision";
+      node_name == "b_leader_slot_precision";
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const

@@ -37,12 +37,6 @@ nodes:
     yaw: 0.0
     type: stationing_slot
 
-  a_leader_slot_precision:
-    x: 0.5229313969612122
-    y: 0.2872968912124634
-    yaw: 0.0
-    type: stationing_slot_precision
-
   b_leader_slot:
     x: 0.005939602851867676
     y: -1.005650281906128

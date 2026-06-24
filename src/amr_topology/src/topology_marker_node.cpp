@@ -63,8 +63,11 @@ public:
     this->declare_parameter<double>("rc_start_x", 2.471);
     this->declare_parameter<double>("rc_start_y", -3.05);
     this->declare_parameter<bool>("show_rc_a_stop", true);
-    this->declare_parameter<double>("rc_a_stop_x", 0.2519901692867279);
-    this->declare_parameter<double>("rc_a_stop_y", 0.28689199686050415);
+    this->declare_parameter<double>("rc_a_stop_x", 0.4779384434223175);
+    this->declare_parameter<double>("rc_a_stop_y", 0.28734058141708374);
+    this->declare_parameter<bool>("show_rc_direct_a_stop_trigger", true);
+    this->declare_parameter<double>("rc_direct_a_stop_trigger_x", 0.774304094708256);
+    this->declare_parameter<double>("rc_direct_a_stop_trigger_y", 0.28734058141708374);
 
     frame_id_ = this->get_parameter("frame_id").as_string();
     marker_radius_ = this->get_parameter("marker_radius").as_double();
@@ -128,6 +131,19 @@ private:
       point.r = 1.0;
       point.g = 0.1;
       point.b = 0.1;
+      point.radius = marker_radius_ * 1.15;
+      markers_.push_back(point);
+    }
+
+    if (this->get_parameter("show_rc_direct_a_stop_trigger").as_bool()) {
+      MarkerPoint point;
+      point.name = "rc_direct_a_stop_trigger";
+      point.label = "rc_direct_a_stop_trigger";
+      point.x = this->get_parameter("rc_direct_a_stop_trigger_x").as_double();
+      point.y = this->get_parameter("rc_direct_a_stop_trigger_y").as_double();
+      point.r = 0.1;
+      point.g = 0.95;
+      point.b = 0.35;
       point.radius = marker_radius_ * 1.15;
       markers_.push_back(point);
     }
