@@ -113,6 +113,8 @@ public:
     this->declare_parameter<double>("precision_goal_tolerance", 0.04);
     this->declare_parameter<double>("waypoint_tolerance", 0.22);
     this->declare_parameter<double>("yaw_tolerance", 0.08);
+    this->declare_parameter<bool>("stop_rc_car_on_a_leader_slot_ccw_yaw", false);
+    this->declare_parameter<double>("rc_car_a_slot_stop_yaw_delta", M_PI / 3.0);
     this->declare_parameter<double>("max_linear_speed", 0.14);
     this->declare_parameter<double>("max_angular_speed", 0.45);
     this->declare_parameter<double>("linear_gain", 0.70);
@@ -181,6 +183,10 @@ public:
     precision_goal_tolerance_ = this->get_parameter("precision_goal_tolerance").as_double();
     waypoint_tolerance_ = this->get_parameter("waypoint_tolerance").as_double();
     yaw_tolerance_ = this->get_parameter("yaw_tolerance").as_double();
+    stop_rc_car_on_a_leader_slot_ccw_yaw_ =
+      this->get_parameter("stop_rc_car_on_a_leader_slot_ccw_yaw").as_bool();
+    rc_car_a_slot_stop_yaw_delta_ = std::max(
+      0.0, this->get_parameter("rc_car_a_slot_stop_yaw_delta").as_double());
     max_linear_speed_ = this->get_parameter("max_linear_speed").as_double();
     max_angular_speed_ = this->get_parameter("max_angular_speed").as_double();
     linear_gain_ = this->get_parameter("linear_gain").as_double();
@@ -318,7 +324,6 @@ public:
       if (!rclcpp::ok()) {
         return;
       }
-      publish_rc_car_mode("stop");
       wait_at_slot("A", "a_entry");
       if (!rclcpp::ok()) {
         return;
@@ -1341,12 +1346,35 @@ private:
     RCLCPP_INFO(this->get_logger(), "Rotating in place to %s yaw", label.c_str());
 
     rclcpp::Rate rate(20.0);
+    std::optional<double> start_yaw;
+    bool rc_car_stop_sent_for_yaw_delta = false;
     while (rclcpp::ok()) {
       rclcpp::spin_some(this->get_node_base_interface());
       const auto pose = lookup_robot_pose();
       if (!pose.has_value()) {
         rate.sleep();
         continue;
+      }
+
+      if (!start_yaw.has_value()) {
+        start_yaw = pose->yaw;
+      }
+
+      if (
+        stop_rc_car_on_a_leader_slot_ccw_yaw_ &&
+        label == "a_leader_slot" &&
+        !rc_car_stop_sent_for_yaw_delta)
+      {
+        const double ccw_yaw_delta = normalize_angle(pose->yaw - start_yaw.value());
+        if (ccw_yaw_delta >= rc_car_a_slot_stop_yaw_delta_) {
+          publish_rc_car_mode("stop");
+          rc_car_stop_sent_for_yaw_delta = true;
+          RCLCPP_INFO(
+            this->get_logger(),
+            "Stopping RC car after %.2f rad CCW rotation at %s",
+            ccw_yaw_delta,
+            label.c_str());
+        }
       }
 
       const double yaw_error = normalize_angle(target_yaw - pose->yaw);
@@ -1442,6 +1470,8 @@ private:
   double precision_goal_tolerance_{0.04};
   double waypoint_tolerance_{0.22};
   double yaw_tolerance_{0.08};
+  bool stop_rc_car_on_a_leader_slot_ccw_yaw_{false};
+  double rc_car_a_slot_stop_yaw_delta_{M_PI / 3.0};
   double max_linear_speed_{0.14};
   double max_angular_speed_{0.45};
   double linear_gain_{0.70};

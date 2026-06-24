@@ -49,12 +49,12 @@ def generate_launch_description():
     )
     rc_a_stop_x_arg = DeclareLaunchArgument(
         'rc_a_stop_x',
-        default_value='0.7064711451530457',
+        default_value='0.2519901692867279',
         description='RC car A slot stop marker x coordinate in map frame',
     )
     rc_a_stop_y_arg = DeclareLaunchArgument(
         'rc_a_stop_y',
-        default_value='0.29016929864883423',
+        default_value='0.28689199686050415',
         description='RC car A slot stop marker y coordinate in map frame',
     )
     marker_radius_arg = DeclareLaunchArgument(

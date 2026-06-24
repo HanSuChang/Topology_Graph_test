@@ -63,8 +63,8 @@ public:
     this->declare_parameter<double>("rc_start_x", 2.471);
     this->declare_parameter<double>("rc_start_y", -3.05);
     this->declare_parameter<bool>("show_rc_a_stop", true);
-    this->declare_parameter<double>("rc_a_stop_x", 0.7064711451530457);
-    this->declare_parameter<double>("rc_a_stop_y", 0.29016929864883423);
+    this->declare_parameter<double>("rc_a_stop_x", 0.2519901692867279);
+    this->declare_parameter<double>("rc_a_stop_y", 0.28689199686050415);
 
     frame_id_ = this->get_parameter("frame_id").as_string();
     marker_radius_ = this->get_parameter("marker_radius").as_double();
