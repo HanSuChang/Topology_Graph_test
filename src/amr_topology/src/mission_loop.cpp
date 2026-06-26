@@ -10,12 +10,17 @@
 #include <vector>
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav2_msgs/action/follow_path.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -103,6 +108,9 @@ public:
     this->declare_parameter<std::string>("leader_pose_topic", "/turtlebot/pose");
     this->declare_parameter<std::string>("rc_car_mode_topic", "/rc_car/follower_mode");
     this->declare_parameter<std::string>("rc_car_slot_status_topic", "/rc_car/slot_wait_status");
+    this->declare_parameter<std::string>("rc_car_odom_topic", "/rc_car/odom");
+    this->declare_parameter<std::string>("aruco_enable_topic", "/aruco_marker/enable");
+    this->declare_parameter<std::string>("aruco_target_topic", "/aruco_marker/target");
     this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<bool>("enable_lidar_safety", true);
@@ -115,6 +123,9 @@ public:
     this->declare_parameter<double>("yaw_tolerance", 0.08);
     this->declare_parameter<bool>("stop_rc_car_on_a_leader_slot_ccw_yaw", false);
     this->declare_parameter<double>("rc_car_a_slot_stop_yaw_delta", M_PI / 3.0);
+    this->declare_parameter<double>("rc_a_stop_x", 0.573159396648407);
+    this->declare_parameter<double>("rc_a_stop_y", -0.003990175202488899);
+    this->declare_parameter<double>("rc_a_stop_tolerance", 0.12);
     this->declare_parameter<double>("max_linear_speed", 0.14);
     this->declare_parameter<double>("max_angular_speed", 0.45);
     this->declare_parameter<double>("linear_gain", 0.70);
@@ -171,6 +182,12 @@ public:
     this->declare_parameter<double>("corridor_min_passage_width", 0.45);
     this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
     this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
+    this->declare_parameter<bool>("enable_a_slot_aruco_follow", true);
+    this->declare_parameter<double>("aruco_search_angular_speed", 0.18);
+    this->declare_parameter<double>("aruco_approach_linear_speed", 0.045);
+    this->declare_parameter<double>("aruco_approach_angular_gain", 0.40);
+    this->declare_parameter<double>("aruco_stop_distance", 0.28);
+    this->declare_parameter<double>("aruco_detection_timeout_seconds", 0.6);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -187,6 +204,10 @@ public:
       this->get_parameter("stop_rc_car_on_a_leader_slot_ccw_yaw").as_bool();
     rc_car_a_slot_stop_yaw_delta_ = std::max(
       0.0, this->get_parameter("rc_car_a_slot_stop_yaw_delta").as_double());
+    rc_a_stop_x_ = this->get_parameter("rc_a_stop_x").as_double();
+    rc_a_stop_y_ = this->get_parameter("rc_a_stop_y").as_double();
+    rc_a_stop_tolerance_ = std::max(
+      0.01, this->get_parameter("rc_a_stop_tolerance").as_double());
     max_linear_speed_ = this->get_parameter("max_linear_speed").as_double();
     max_angular_speed_ = this->get_parameter("max_angular_speed").as_double();
     linear_gain_ = this->get_parameter("linear_gain").as_double();
@@ -236,6 +257,17 @@ public:
       this->get_parameter("corridor_hard_stop_width").as_double();
     corridor_max_lateral_offset_ =
       this->get_parameter("corridor_max_lateral_offset").as_double();
+    enable_a_slot_aruco_follow_ =
+      this->get_parameter("enable_a_slot_aruco_follow").as_bool();
+    aruco_search_angular_speed_ =
+      this->get_parameter("aruco_search_angular_speed").as_double();
+    aruco_approach_linear_speed_ =
+      this->get_parameter("aruco_approach_linear_speed").as_double();
+    aruco_approach_angular_gain_ =
+      this->get_parameter("aruco_approach_angular_gain").as_double();
+    aruco_stop_distance_ = this->get_parameter("aruco_stop_distance").as_double();
+    aruco_detection_timeout_seconds_ =
+      this->get_parameter("aruco_detection_timeout_seconds").as_double();
 
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
@@ -287,10 +319,21 @@ public:
     rc_car_mode_pub_ = this->create_publisher<std_msgs::msg::String>(
       this->get_parameter("rc_car_mode_topic").as_string(),
       rclcpp::QoS(1).reliable().transient_local());
+    aruco_enable_pub_ = this->create_publisher<std_msgs::msg::Bool>(
+      this->get_parameter("aruco_enable_topic").as_string(),
+      rclcpp::QoS(1).reliable().transient_local());
+    aruco_target_sub_ = this->create_subscription<geometry_msgs::msg::PointStamped>(
+      this->get_parameter("aruco_target_topic").as_string(),
+      10,
+      std::bind(&MissionLoop::handle_aruco_target, this, std::placeholders::_1));
     rc_car_slot_status_sub_ = this->create_subscription<std_msgs::msg::String>(
       this->get_parameter("rc_car_slot_status_topic").as_string(),
       10,
       std::bind(&MissionLoop::handle_rc_car_slot_status, this, std::placeholders::_1));
+    rc_car_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+      this->get_parameter("rc_car_odom_topic").as_string(),
+      10,
+      std::bind(&MissionLoop::handle_rc_car_odom, this, std::placeholders::_1));
     rc_car_mode_timer_ = this->create_wall_timer(
       500ms, std::bind(&MissionLoop::republish_rc_car_mode, this));
     mppi_follow_path_client_ = rclcpp_action::create_client<FollowPath>(
@@ -319,17 +362,29 @@ public:
 
     for (int cycle = 1; cycle <= repeat_count_ && rclcpp::ok(); ++cycle) {
       RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to A", cycle, repeat_count_);
+      rc_a_stop_monitoring_ = true;
+      rc_a_stop_sent_ = false;
       publish_rc_car_mode("follow");
       go_path({"loading", "intersection_1", "a_entry", "a_leader_slot"});
+      rc_a_stop_monitoring_ = false;
       if (!rclcpp::ok()) {
         return;
       }
-      wait_at_slot("A", "a_entry");
+      wait_stopped("A", 1.0);
       if (!rclcpp::ok()) {
         return;
       }
       publish_rc_car_mode("stop");
-      hold_at_leader_slot("A leader slot");
+      wait_stopped("A", std::max(0.0, wait_seconds_ - 1.0));
+      rotate_to_face("a_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
+      if (enable_a_slot_aruco_follow_) {
+        aruco_follow_after_a_leader_slot();
+      } else {
+        hold_at_leader_slot("A leader slot");
+      }
       if (!rclcpp::ok()) {
         return;
       }
@@ -1001,6 +1056,34 @@ private:
     last_rc_car_slot_status_ = msg->data;
   }
 
+  void handle_rc_car_odom(const nav_msgs::msg::Odometry::SharedPtr msg)
+  {
+    if (!rc_a_stop_monitoring_ || rc_a_stop_sent_) {
+      return;
+    }
+
+    const double dx = msg->pose.pose.position.x - rc_a_stop_x_;
+    const double dy = msg->pose.pose.position.y - rc_a_stop_y_;
+    const double distance = std::hypot(dx, dy);
+    if (distance > rc_a_stop_tolerance_) {
+      return;
+    }
+
+    rc_a_stop_sent_ = true;
+    publish_rc_car_mode("stop");
+    RCLCPP_INFO(
+      this->get_logger(),
+      "RC car reached rc_a_stop: distance=%.3f tolerance=%.3f; stopping RC car",
+      distance,
+      rc_a_stop_tolerance_);
+  }
+
+  void handle_aruco_target(const geometry_msgs::msg::PointStamped::SharedPtr msg)
+  {
+    last_aruco_target_ = *msg;
+    last_aruco_target_time_ = this->now();
+  }
+
   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     const rclcpp::Time stamp =
@@ -1288,6 +1371,165 @@ private:
     }
   }
 
+  void aruco_follow_after_a_leader_slot()
+  {
+    RCLCPP_INFO(this->get_logger(), "Starting A leader slot ArUco follow mission");
+    set_aruco_detection_enabled(true);
+    last_aruco_target_.reset();
+
+    rclcpp::Rate rate(20.0);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+
+      if (!aruco_target_is_fresh()) {
+        geometry_msgs::msg::Twist command;
+        command.angular.z = std::abs(aruco_search_angular_speed_);
+        cmd_pub_->publish(command);
+        rate.sleep();
+        continue;
+      }
+
+      stop();
+      RCLCPP_INFO(this->get_logger(), "RC car ArUco marker detected. Approaching marker");
+      break;
+    }
+
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+
+      if (!aruco_target_is_fresh()) {
+        geometry_msgs::msg::Twist command;
+        command.angular.z = std::abs(aruco_search_angular_speed_) * 0.5;
+        cmd_pub_->publish(command);
+        rate.sleep();
+        continue;
+      }
+
+      const auto target = last_aruco_target_.value();
+      const double distance = target.point.y;
+      if (distance <= aruco_stop_distance_) {
+        stop();
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Reached RC car ArUco stop distance %.2fm. Stopping and disabling ArUco detection",
+          distance);
+        set_aruco_detection_enabled(false);
+        rotate_to_node_yaw("a_leader_slot");
+        drive_straight_distance(0.01);
+        publish_rc_car_mode("turn_ccw_90");
+        wait_stopped("RC car 90 degree turn", 3.0);
+        rotate_ccw_relative(M_PI, "after RC car 90 degree turn");
+        hold_at_leader_slot("A leader slot after ArUco follow");
+        return;
+      }
+
+      geometry_msgs::msg::Twist command;
+      command.linear.x = aruco_approach_linear_speed_;
+      command.angular.z = clamp(
+        -aruco_approach_angular_gain_ * target.point.x,
+        -std::abs(max_angular_speed_),
+        std::abs(max_angular_speed_));
+      cmd_pub_->publish(command);
+      rate.sleep();
+    }
+
+    stop();
+    set_aruco_detection_enabled(false);
+  }
+
+  bool aruco_target_is_fresh() const
+  {
+    return last_aruco_target_.has_value() &&
+      (this->now() - last_aruco_target_time_).seconds() <= aruco_detection_timeout_seconds_;
+  }
+
+  void set_aruco_detection_enabled(bool enabled)
+  {
+    std_msgs::msg::Bool msg;
+    msg.data = enabled;
+    aruco_enable_pub_->publish(msg);
+  }
+
+  void drive_straight_distance(double distance)
+  {
+    if (!rclcpp::ok() || distance <= 0.0) {
+      return;
+    }
+
+    const auto start_pose = lookup_robot_pose();
+    if (!start_pose.has_value()) {
+      return;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Driving straight %.3fm", distance);
+    rclcpp::Rate rate(20.0);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      const auto pose = lookup_robot_pose();
+      if (!pose.has_value()) {
+        rate.sleep();
+        continue;
+      }
+
+      const double traveled = std::hypot(pose->x - start_pose->x, pose->y - start_pose->y);
+      if (traveled >= distance) {
+        stop();
+        return;
+      }
+
+      geometry_msgs::msg::Twist command;
+      command.linear.x = 0.02;
+      cmd_pub_->publish(command);
+      rate.sleep();
+    }
+    stop();
+  }
+
+  void rotate_ccw_relative(double delta_yaw, const std::string & label)
+  {
+    const auto start_pose = lookup_robot_pose();
+    if (!start_pose.has_value()) {
+      return;
+    }
+
+    const double start_yaw = start_pose->yaw;
+    const double target_delta = std::abs(delta_yaw);
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Rotating CCW %.2f rad for %s",
+      target_delta,
+      label.c_str());
+
+    rclcpp::Rate rate(20.0);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      const auto pose = lookup_robot_pose();
+      if (!pose.has_value()) {
+        rate.sleep();
+        continue;
+      }
+
+      double rotated = normalize_angle(pose->yaw - start_yaw);
+      if (rotated < 0.0) {
+        rotated += 2.0 * M_PI;
+      }
+
+      const double remaining = target_delta - rotated;
+      if (remaining <= yaw_tolerance_) {
+        stop();
+        return;
+      }
+
+      geometry_msgs::msg::Twist command;
+      command.angular.z = clamp(
+        angular_gain_ * remaining,
+        0.12,
+        max_angular_speed_);
+      cmd_pub_->publish(command);
+      rate.sleep();
+    }
+  }
+
   void wait_stopped(const std::string & label, double seconds)
   {
     if (!rclcpp::ok()) {
@@ -1452,6 +1694,9 @@ private:
     if (last_rc_car_mode_.empty()) {
       return;
     }
+    if (last_rc_car_mode_ == "turn_ccw_90") {
+      return;
+    }
 
     std_msgs::msg::String msg;
     msg.data = last_rc_car_mode_;
@@ -1472,6 +1717,9 @@ private:
   double yaw_tolerance_{0.08};
   bool stop_rc_car_on_a_leader_slot_ccw_yaw_{false};
   double rc_car_a_slot_stop_yaw_delta_{M_PI / 3.0};
+  double rc_a_stop_x_{0.573159396648407};
+  double rc_a_stop_y_{-0.003990175202488899};
+  double rc_a_stop_tolerance_{0.12};
   double max_linear_speed_{0.14};
   double max_angular_speed_{0.45};
   double linear_gain_{0.70};
@@ -1503,6 +1751,12 @@ private:
   double corridor_min_passage_width_{0.45};
   double corridor_hard_stop_width_{0.40};
   double corridor_max_lateral_offset_{0.24};
+  bool enable_a_slot_aruco_follow_{true};
+  double aruco_search_angular_speed_{0.18};
+  double aruco_approach_linear_speed_{0.045};
+  double aruco_approach_angular_gain_{0.40};
+  double aruco_stop_distance_{0.28};
+  double aruco_detection_timeout_seconds_{0.6};
   bool enable_lidar_safety_{true};
   bool enable_mppi_rescue_{true};
   bool enable_corridor_pass_{true};
@@ -1510,15 +1764,20 @@ private:
   bool mppi_stop_and_plan_active_{false};
   bool mppi_side_escape_active_{false};
   bool charger_parking_requested_{false};
+  bool rc_a_stop_monitoring_{false};
+  bool rc_a_stop_sent_{false};
   std::string last_rc_car_mode_;
   std::string last_rc_car_slot_status_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr rc_car_mode_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr aruco_enable_pub_;
   rclcpp::TimerBase::SharedPtr rc_car_mode_timer_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr rc_car_slot_status_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr rc_car_odom_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr aruco_target_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   rclcpp_action::Client<FollowPath>::SharedPtr mppi_follow_path_client_;
@@ -1535,6 +1794,8 @@ private:
   double mppi_preferred_rescue_side_{0.0};
   double mppi_preferred_rescue_lateral_offset_{0.0};
   std::optional<sensor_msgs::msg::LaserScan> last_scan_;
+  std::optional<geometry_msgs::msg::PointStamped> last_aruco_target_;
+  rclcpp::Time last_aruco_target_time_{0, 0, RCL_ROS_TIME};
   amr_topology::LocalAStarPurePursuit local_planner_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;

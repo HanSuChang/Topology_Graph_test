@@ -96,6 +96,17 @@ ament_target_dependencies(
 )
 target_link_libraries(image_rotate_compress_node ${OpenCV_LIBS})
 
+add_executable(aruco_marker_detector_node src/aruco_marker_detector_node.cpp)
+target_compile_features(aruco_marker_detector_node PUBLIC cxx_std_17)
+ament_target_dependencies(
+  aruco_marker_detector_node
+  geometry_msgs
+  rclcpp
+  sensor_msgs
+  std_msgs
+)
+target_link_libraries(aruco_marker_detector_node ${OpenCV_LIBS})
+
 install(TARGETS
   topology_follower
   topology_marker_node
@@ -103,6 +114,7 @@ install(TARGETS
   rc_car_follower_node
   image_rotate_node
   image_rotate_compress_node
+  aruco_marker_detector_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

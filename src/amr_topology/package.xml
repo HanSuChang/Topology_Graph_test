@@ -27,6 +27,7 @@
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <exec_depend>rqt_image_view</exec_depend>
   <exec_depend>rviz2</exec_depend>
+  <exec_depend>v4l2_camera</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
