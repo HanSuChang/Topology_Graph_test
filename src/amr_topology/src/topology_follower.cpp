@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/buffer.h>
@@ -73,6 +74,7 @@ public:
     this->declare_parameter<std::string>("map_frame", "map");
     this->declare_parameter<std::string>("base_frame", "base_link");
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    this->declare_parameter<std::string>("leader_pose_topic", "/turtlebot/pose");
     this->declare_parameter<double>("goal_tolerance", 0.08);
     this->declare_parameter<double>("waypoint_tolerance", 0.18);
     this->declare_parameter<double>("start_skip_tolerance", 0.35);
@@ -105,6 +107,8 @@ public:
 
     const auto cmd_vel_topic = this->get_parameter("cmd_vel_topic").as_string();
     cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
+    leader_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
+      this->get_parameter("leader_pose_topic").as_string(), 10);
   }
 
   void run()
@@ -180,6 +184,7 @@ private:
       pose.x = transform.transform.translation.x;
       pose.y = transform.transform.translation.y;
       pose.yaw = yaw_from_quaternion(transform.transform.rotation);
+      publish_leader_pose(pose, rclcpp::Time(transform.header.stamp));
       return pose;
     } catch (const tf2::TransformException & ex) {
       RCLCPP_WARN_THROTTLE(
@@ -279,6 +284,18 @@ private:
     cmd_pub_->publish(geometry_msgs::msg::Twist{});
   }
 
+  void publish_leader_pose(const RobotPose & pose, const rclcpp::Time & stamp)
+  {
+    geometry_msgs::msg::PoseStamped msg;
+    msg.header.frame_id = map_frame_;
+    msg.header.stamp = stamp;
+    msg.pose.position.x = pose.x;
+    msg.pose.position.y = pose.y;
+    msg.pose.orientation.w = std::cos(pose.yaw * 0.5);
+    msg.pose.orientation.z = std::sin(pose.yaw * 0.5);
+    leader_pose_pub_->publish(msg);
+  }
+
   std::string topology_file_;
   std::string frame_id_;
   std::string map_frame_;
@@ -299,6 +316,7 @@ private:
   double angular_gain_{0.8};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_pub_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 };

@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <memory>
-#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -212,18 +211,7 @@ enum class FollowerMode
   Return,
   Align,
   TurnPrepareLeft,
-  TurnCcw90,
-  RcCarStart
-};
-
-enum class RcCarStartState
-{
-  Inactive,
-  TurnCcw90,
-  RotateToStart,
-  DriveToStart,
-  AlignStartYaw,
-  Complete
+  DirectRcAStop
 };
 
 }  // namespace
@@ -267,8 +255,6 @@ public:
     this->declare_parameter<double>("right_meters_per_tick", -0.012);
     this->declare_parameter<bool>("enable_command_odom_fallback", true);
     this->declare_parameter<double>("encoder_timeout_seconds", 0.50);
-    this->declare_parameter<double>("encoder_startup_settle_seconds", 1.0);
-    this->declare_parameter<bool>("require_encoder_baseline", true);
     this->declare_parameter<double>("max_pwm_wheel_speed", 0.24);
     this->declare_parameter<double>("odom_publish_rate_hz", 20.0);
     this->declare_parameter<double>("leader_turn_assist_heading", 0.35);
@@ -304,23 +290,17 @@ public:
     this->declare_parameter<double>("intersection_1_turn_radius", 0.35);
     this->declare_parameter<double>("intersection_1_turn_seconds", 1.20);
     this->declare_parameter<std::string>("intersection_1_left_turn_command", "3");
-    this->declare_parameter<bool>("enable_intersection_1_turn_assist", true);
-    this->declare_parameter<double>("intersection_1_turn_assist_radius", 0.45);
-    this->declare_parameter<double>("intersection_1_turn_assist_yaw_tolerance", 0.25);
-    this->declare_parameter<double>("intersection_1_turn_assist_max_progress", 0.45);
-    this->declare_parameter<double>("intersection_1_turn_assist_lateral_tolerance", 0.35);
     this->declare_parameter<double>("a_entry_x", 1.2001334428787231);
     this->declare_parameter<double>("a_entry_y", -0.001835942268371582);
-    this->declare_parameter<double>("staged_yaw_tolerance", 0.12);
-    this->declare_parameter<int>("staged_turn_pwm", 70);
-    this->declare_parameter<double>("turn_ccw_90_degrees", 90.0);
-    this->declare_parameter<double>("turn_ccw_90_yaw_tolerance", 0.08);
-    this->declare_parameter<int>("turn_ccw_90_pwm", 70);
-    this->declare_parameter<double>("rc_car_start_position_tolerance", 0.20);
-    this->declare_parameter<double>("rc_car_start_yaw_tolerance", 0.15);
-    this->declare_parameter<int>("rc_car_start_forward_pwm", 85);
-    this->declare_parameter<int>("rc_car_start_turn_pwm", 70);
-    this->declare_parameter<int>("rc_car_start_drive_turn_pwm_delta", 18);
+    this->declare_parameter<double>("rc_car_a_stop_x", 0.7064711451530457);
+    this->declare_parameter<double>("rc_car_a_stop_y", 0.29016929864883423);
+    this->declare_parameter<double>("rc_car_a_stop_yaw", 2.97);
+    this->declare_parameter<double>("rc_car_a_stop_tolerance", 0.12);
+    this->declare_parameter<double>("rc_car_a_stop_pass_distance", 0.08);
+    this->declare_parameter<double>("rc_car_a_stop_pass_radius", 0.55);
+    this->declare_parameter<double>("direct_target_heading_deadband", 0.25);
+    this->declare_parameter<double>("direct_target_turn_in_place_heading", 0.55);
+    this->declare_parameter<bool>("align_rc_car_a_stop_yaw", false);
 
     target_distance_ = this->get_parameter("target_distance").as_double();
     distance_deadband_ = this->get_parameter("distance_deadband").as_double();
@@ -351,9 +331,6 @@ public:
       this->get_parameter("enable_command_odom_fallback").as_bool();
     encoder_timeout_seconds_ = std::max(
       0.0, this->get_parameter("encoder_timeout_seconds").as_double());
-    encoder_startup_settle_seconds_ = std::max(
-      0.0, this->get_parameter("encoder_startup_settle_seconds").as_double());
-    require_encoder_baseline_ = this->get_parameter("require_encoder_baseline").as_bool();
     max_pwm_wheel_speed_ = std::max(
       0.01, this->get_parameter("max_pwm_wheel_speed").as_double());
     leader_turn_assist_heading_ = this->get_parameter("leader_turn_assist_heading").as_double();
@@ -416,38 +393,23 @@ public:
       this->get_parameter("intersection_1_turn_seconds").as_double();
     intersection_1_left_turn_command_ =
       this->get_parameter("intersection_1_left_turn_command").as_string();
-    enable_intersection_1_turn_assist_ =
-      this->get_parameter("enable_intersection_1_turn_assist").as_bool();
-    intersection_1_turn_assist_radius_ = std::max(
-      0.01, this->get_parameter("intersection_1_turn_assist_radius").as_double());
-    intersection_1_turn_assist_yaw_tolerance_ = std::max(
-      0.01, this->get_parameter("intersection_1_turn_assist_yaw_tolerance").as_double());
-    intersection_1_turn_assist_max_progress_ =
-      this->get_parameter("intersection_1_turn_assist_max_progress").as_double();
-    intersection_1_turn_assist_lateral_tolerance_ = std::max(
-      0.01, this->get_parameter("intersection_1_turn_assist_lateral_tolerance").as_double());
     a_entry_x_ = this->get_parameter("a_entry_x").as_double();
     a_entry_y_ = this->get_parameter("a_entry_y").as_double();
-    staged_yaw_tolerance_ = std::max(
-      0.01, this->get_parameter("staged_yaw_tolerance").as_double());
-    staged_turn_pwm_ = std::clamp(
-      static_cast<int>(this->get_parameter("staged_turn_pwm").as_int()), 0, 255);
-    turn_ccw_90_radians_ =
-      this->get_parameter("turn_ccw_90_degrees").as_double() * M_PI / 180.0;
-    turn_ccw_90_yaw_tolerance_ = std::max(
-      0.005, this->get_parameter("turn_ccw_90_yaw_tolerance").as_double());
-    turn_ccw_90_pwm_ = std::clamp(
-      static_cast<int>(this->get_parameter("turn_ccw_90_pwm").as_int()), 0, 255);
-    rc_car_start_position_tolerance_ = std::max(
-      0.03, this->get_parameter("rc_car_start_position_tolerance").as_double());
-    rc_car_start_yaw_tolerance_ = std::max(
-      0.01, this->get_parameter("rc_car_start_yaw_tolerance").as_double());
-    rc_car_start_forward_pwm_ = std::clamp(
-      static_cast<int>(this->get_parameter("rc_car_start_forward_pwm").as_int()), 0, 255);
-    rc_car_start_turn_pwm_ = std::clamp(
-      static_cast<int>(this->get_parameter("rc_car_start_turn_pwm").as_int()), 0, 255);
-    rc_car_start_drive_turn_pwm_delta_ = std::clamp(
-      static_cast<int>(this->get_parameter("rc_car_start_drive_turn_pwm_delta").as_int()), 0, 255);
+    rc_car_a_stop_x_ = this->get_parameter("rc_car_a_stop_x").as_double();
+    rc_car_a_stop_y_ = this->get_parameter("rc_car_a_stop_y").as_double();
+    rc_car_a_stop_yaw_ = this->get_parameter("rc_car_a_stop_yaw").as_double();
+    rc_car_a_stop_tolerance_ = std::max(
+      0.03, this->get_parameter("rc_car_a_stop_tolerance").as_double());
+    rc_car_a_stop_pass_distance_ = std::max(
+      0.0, this->get_parameter("rc_car_a_stop_pass_distance").as_double());
+    rc_car_a_stop_pass_radius_ = std::max(
+      0.05, this->get_parameter("rc_car_a_stop_pass_radius").as_double());
+    direct_target_heading_deadband_ = std::max(
+      0.01, this->get_parameter("direct_target_heading_deadband").as_double());
+    direct_target_turn_in_place_heading_ = std::max(
+      direct_target_heading_deadband_,
+      this->get_parameter("direct_target_turn_in_place_heading").as_double());
+    align_rc_car_a_stop_yaw_ = this->get_parameter("align_rc_car_a_stop_yaw").as_bool();
     mode_ = this->get_parameter("start_in_follow_mode").as_bool() ?
       FollowerMode::Follow : FollowerMode::Stop;
 
@@ -566,14 +528,6 @@ private:
     last_command_.clear();
     last_sent_pwm_command_ = PwmCommand{0, 0};
     last_command_sent_at_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
-    serial_connected_at_ = this->now();
-    serial_rx_buffer_.clear();
-    last_left_ticks_.reset();
-    last_right_ticks_.reset();
-    last_encoder_stamp_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
-    last_encoder_motion_stamp_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
-    encoder_ready_ = false;
-    encoder_startup_settle_logged_ = false;
     RCLCPP_INFO(
       this->get_logger(),
       "Arduino serial connected: %s @ %d",
@@ -651,55 +605,27 @@ private:
   {
     const FollowerMode previous_mode = mode_;
     if (mode == "follow") {
-      mode_ = FollowerMode::Follow;
-      turn_ccw_90_completed_ = false;
+      if (mode_ != FollowerMode::DirectRcAStop) {
+        mode_ = FollowerMode::Follow;
+      }
       if (previous_mode != mode_) {
         follow_mode_started_at_ = this->now();
       }
     } else if (mode == "return") {
       mode_ = FollowerMode::Return;
-      turn_ccw_90_completed_ = false;
+      rc_car_a_stop_direct_complete_ = false;
       clear_intersection_1_left_turn();
     } else if (mode == "align") {
       mode_ = FollowerMode::Align;
-      turn_ccw_90_completed_ = false;
+      rc_car_a_stop_direct_complete_ = false;
       clear_intersection_1_left_turn();
     } else if (mode == "turn_prepare_left") {
       mode_ = FollowerMode::TurnPrepareLeft;
-      turn_ccw_90_completed_ = false;
-      clear_intersection_1_left_turn();
-    } else if (mode == "turn_ccw_90") {
-      if (turn_ccw_90_completed_) {
-        mode_ = FollowerMode::Stop;
-        turn_ccw_90_target_yaw_.reset();
-        send_pwm_command(PwmCommand{0, 0});
-        return;
-      }
-      if (mode_ == FollowerMode::TurnCcw90 && turn_ccw_90_target_yaw_.has_value()) {
-        return;
-      }
-      if (follower_pose_.has_value()) {
-        turn_ccw_90_target_yaw_ =
-          normalize_angle(follower_pose_.value().yaw + std::abs(turn_ccw_90_radians_));
-      }
-      mode_ = FollowerMode::TurnCcw90;
-      clear_intersection_1_left_turn();
-    } else if (mode == "rc_car_start") {
-      mode_ = FollowerMode::RcCarStart;
-      turn_ccw_90_completed_ = false;
-      rc_car_start_state_ = RcCarStartState::TurnCcw90;
-      if (follower_pose_.has_value()) {
-        rc_car_start_turn_target_yaw_ =
-          normalize_angle(follower_pose_.value().yaw + std::abs(turn_ccw_90_radians_));
-      } else {
-        rc_car_start_turn_target_yaw_.reset();
-      }
+      rc_car_a_stop_direct_complete_ = false;
       clear_intersection_1_left_turn();
     } else {
       mode_ = FollowerMode::Stop;
-      turn_ccw_90_completed_ = false;
-      rc_car_start_state_ = RcCarStartState::Inactive;
-      rc_car_start_turn_target_yaw_.reset();
+      rc_car_a_stop_direct_complete_ = false;
       clear_intersection_1_left_turn();
       send_pwm_command(PwmCommand{0, 0});
     }
@@ -716,17 +642,7 @@ private:
       return;
     }
 
-    if (mode_ == FollowerMode::TurnCcw90 || mode_ == FollowerMode::RcCarStart) {
-      if (!follower_pose_is_fresh()) {
-        RCLCPP_WARN_THROTTLE(
-          this->get_logger(),
-          *this->get_clock(),
-          1000,
-          "Waiting for fresh follower pose");
-        send_pwm_command(PwmCommand{0, 0});
-        return;
-      }
-    } else if (!poses_are_fresh()) {
+    if (!poses_are_fresh()) {
       RCLCPP_WARN_THROTTLE(
         this->get_logger(),
         *this->get_clock(),
@@ -746,45 +662,30 @@ private:
       return;
     }
 
+    const Pose2D leader = leader_pose_.value();
     const Pose2D follower = follower_pose_.value();
 
-    if (mode_ == FollowerMode::TurnCcw90 && !turn_ccw_90_target_yaw_.has_value()) {
-      turn_ccw_90_target_yaw_ = normalize_angle(follower.yaw + std::abs(turn_ccw_90_radians_));
-    }
-
-    if (
-      publish_encoder_odom_ &&
-      require_encoder_baseline_ &&
-      !encoder_ready_)
-    {
-      RCLCPP_WARN_THROTTLE(
+    if (mode_ == FollowerMode::Follow && rc_has_passed_intersection_1_toward_a(follower)) {
+      mode_ = FollowerMode::DirectRcAStop;
+      rc_car_a_stop_direct_complete_ = false;
+      RCLCPP_INFO(
         this->get_logger(),
-        *this->get_clock(),
-        1000,
-        "Waiting for encoder baseline before driving");
-      send_pwm_command(PwmCommand{0, 0});
-      return;
+        "RC car passed intersection_1; switching from leader path follow to rc_car_a_stop direct target");
     }
 
-    if (mode_ == FollowerMode::TurnCcw90) {
-      const PwmCommand command = make_turn_ccw_90_command(follower);
-      send_pwm_command(command);
-      return;
-    }
-
-    if (mode_ == FollowerMode::RcCarStart) {
-      const PwmCommand command = make_rc_car_start_command(follower);
+    if (mode_ == FollowerMode::DirectRcAStop) {
+      const double direct_dx = rc_car_a_stop_x_ - follower.x;
+      const double direct_dy = rc_car_a_stop_y_ - follower.y;
+      const double direct_distance = std::hypot(direct_dx, direct_dy);
+      const double direct_heading_error =
+        normalize_angle(std::atan2(direct_dy, direct_dx) - follower.yaw);
+      const double direct_yaw_error = normalize_angle(rc_car_a_stop_yaw_ - follower.yaw);
+      const PwmCommand command = make_direct_target_command(
+        direct_distance, direct_heading_error, direct_yaw_error);
       send_pwm_command(apply_drive_duty(command));
       return;
     }
 
-    if (mode_ == FollowerMode::Follow && should_assist_intersection_1_turn(follower)) {
-      const PwmCommand command = make_intersection_1_turn_assist_command(follower);
-      send_pwm_command(apply_drive_duty(command));
-      return;
-    }
-
-    const Pose2D leader = leader_pose_.value();
     const Pose2D follow_target = select_leader_path_target();
     const double dx = follow_target.x - follower.x;
     const double dy = follow_target.y - follower.y;
@@ -919,21 +820,6 @@ private:
       const std::string line = serial_rx_buffer_.substr(0, newline_pos);
       serial_rx_buffer_.erase(0, newline_pos + 1);
       publish_serial_debug_line(line);
-
-      if (
-        serial_connected_at_.nanoseconds() > 0 &&
-        (this->now() - serial_connected_at_).seconds() < encoder_startup_settle_seconds_)
-      {
-        if (!encoder_startup_settle_logged_) {
-          encoder_startup_settle_logged_ = true;
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Ignoring encoder startup serial for %.2f seconds",
-            encoder_startup_settle_seconds_);
-        }
-        continue;
-      }
-
       long left_ticks = 0;
       long right_ticks = 0;
       if (parse_tick_line(line, left_ticks, right_ticks)) {
@@ -1056,15 +942,6 @@ private:
       last_right_ticks_ = right_ticks;
       last_encoder_stamp_ = this->now();
       last_odom_integrated_stamp_ = last_encoder_stamp_;
-      encoder_ready_ = true;
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Encoder baseline set: L=%ld R=%ld; RC odom ready at x=%.3f y=%.3f yaw=%.3f",
-        left_ticks,
-        right_ticks,
-        odom_pose_.x,
-        odom_pose_.y,
-        odom_pose_.yaw);
       return;
     }
 
@@ -1128,9 +1005,6 @@ private:
   void update_command_odom_fallback()
   {
     if (!enable_command_odom_fallback_) {
-      return;
-    }
-    if (publish_encoder_odom_ && require_encoder_baseline_ && !encoder_ready_) {
       return;
     }
 
@@ -1225,17 +1099,6 @@ private:
     return leader_age <= pose_timeout_seconds_ && follower_age <= pose_timeout_seconds_;
   }
 
-  bool follower_pose_is_fresh() const
-  {
-    if (!follower_pose_.has_value()) {
-      return false;
-    }
-
-    const rclcpp::Time now = this->now();
-    const double follower_age = (now - last_follower_stamp_).seconds();
-    return follower_age <= pose_timeout_seconds_;
-  }
-
   PwmCommand make_follow_command(
     double distance,
     double heading_error,
@@ -1297,200 +1160,60 @@ private:
     return apply_turn_to_pwm(calculate_forward_pwm(leader_distance - target_distance_), turn_error);
   }
 
-  bool progress_from_intersection_1_to_a_entry(
-    const Pose2D & follower,
-    double & progress,
-    double & lateral_error) const
+  bool rc_has_passed_intersection_1_toward_a(const Pose2D & follower) const
   {
-    const double sx = a_entry_x_ - intersection_1_x_;
-    const double sy = a_entry_y_ - intersection_1_y_;
-    const double segment_length = std::hypot(sx, sy);
+    const double ix = intersection_1_x_;
+    const double iy = intersection_1_y_;
+    const double ax = a_entry_x_;
+    const double ay = a_entry_y_;
+    const double vx = ax - ix;
+    const double vy = ay - iy;
+    const double segment_length = std::hypot(vx, vy);
     if (segment_length <= 1e-6) {
-      progress = 0.0;
-      lateral_error = std::numeric_limits<double>::infinity();
       return false;
     }
 
-    const double fx = follower.x - intersection_1_x_;
-    const double fy = follower.y - intersection_1_y_;
-    progress = (fx * sx + fy * sy) / (segment_length * segment_length);
-    lateral_error = std::abs(fx * sy - fy * sx) / segment_length;
-    return true;
-  }
-
-  double intersection_1_to_a_entry_yaw() const
-  {
-    return std::atan2(a_entry_y_ - intersection_1_y_, a_entry_x_ - intersection_1_x_);
-  }
-
-  bool should_assist_intersection_1_turn(const Pose2D & follower) const
-  {
-    if (!enable_intersection_1_turn_assist_) {
+    const double fx = follower.x - ix;
+    const double fy = follower.y - iy;
+    const double distance_from_intersection = std::hypot(fx, fy);
+    if (distance_from_intersection > rc_car_a_stop_pass_radius_) {
       return false;
     }
 
-    double progress = 0.0;
-    double lateral_error = 0.0;
-    if (!progress_from_intersection_1_to_a_entry(follower, progress, lateral_error)) {
-      return false;
-    }
-    if (progress > intersection_1_turn_assist_max_progress_ ||
-      lateral_error > intersection_1_turn_assist_lateral_tolerance_)
-    {
-      return false;
-    }
-
-    const double distance_from_intersection =
-      distance_to_target(follower, intersection_1_x_, intersection_1_y_);
-    if (distance_from_intersection > intersection_1_turn_assist_radius_) {
-      return false;
-    }
-
-    const double heading_error =
-      normalize_angle(intersection_1_to_a_entry_yaw() - follower.yaw);
-    return std::abs(heading_error) > intersection_1_turn_assist_yaw_tolerance_;
+    const double forward_progress = (fx * vx + fy * vy) / segment_length;
+    return forward_progress >= rc_car_a_stop_pass_distance_;
   }
 
-  PwmCommand make_intersection_1_turn_assist_command(const Pose2D & follower)
+  PwmCommand make_direct_target_command(
+    double distance,
+    double heading_error,
+    double target_yaw_error)
   {
-    const double target_yaw = intersection_1_to_a_entry_yaw();
-    const double heading_error = normalize_angle(target_yaw - follower.yaw);
-    double progress = 0.0;
-    double lateral_error = 0.0;
-    (void)progress_from_intersection_1_to_a_entry(follower, progress, lateral_error);
+    if (distance <= rc_car_a_stop_tolerance_) {
+      if (!rc_car_a_stop_direct_complete_) {
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Reached rc_car_a_stop direct target: distance=%.3f yaw_error=%.2f align_yaw=%s",
+          distance,
+          target_yaw_error,
+          align_rc_car_a_stop_yaw_ ? "true" : "false");
+        rc_car_a_stop_direct_complete_ = true;
+      }
 
-    RCLCPP_INFO_THROTTLE(
-      this->get_logger(),
-      *this->get_clock(),
-      1000,
-      "Assisting intersection_1 turn: yaw_error=%.2f progress=%.2f lateral=%.3f",
-      heading_error,
-      progress,
-      lateral_error);
-    return make_staged_turn_command(heading_error);
-  }
-
-  double distance_to_target(const Pose2D & follower, double target_x, double target_y) const
-  {
-    return std::hypot(target_x - follower.x, target_y - follower.y);
-  }
-
-  PwmCommand make_staged_turn_command(double heading_error) const
-  {
-    if (std::abs(heading_error) <= staged_yaw_tolerance_) {
-      return PwmCommand{0, 0};
-    }
-    if (heading_error > 0.0) {
-      return PwmCommand{-staged_turn_pwm_, staged_turn_pwm_};
-    }
-    return PwmCommand{staged_turn_pwm_, -staged_turn_pwm_};
-  }
-
-  PwmCommand make_turn_ccw_90_command(const Pose2D & follower)
-  {
-    if (!turn_ccw_90_target_yaw_.has_value()) {
-      return PwmCommand{0, 0};
-    }
-
-    const double heading_error =
-      normalize_angle(turn_ccw_90_target_yaw_.value() - follower.yaw);
-    if (std::abs(heading_error) <= turn_ccw_90_yaw_tolerance_) {
-      mode_ = FollowerMode::Stop;
-      turn_ccw_90_target_yaw_.reset();
-      turn_ccw_90_completed_ = true;
-      return PwmCommand{0, 0};
-    }
-
-    if (heading_error > 0.0) {
-      return PwmCommand{-turn_ccw_90_pwm_, turn_ccw_90_pwm_};
-    }
-    return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
-  }
-
-  PwmCommand make_rc_car_start_turn_command(double heading_error) const
-  {
-    if (std::abs(heading_error) <= rc_car_start_yaw_tolerance_) {
-      return PwmCommand{0, 0};
-    }
-    if (heading_error > 0.0) {
-      return PwmCommand{-rc_car_start_turn_pwm_, rc_car_start_turn_pwm_};
-    }
-    return PwmCommand{rc_car_start_turn_pwm_, -rc_car_start_turn_pwm_};
-  }
-
-  void transition_rc_car_start(RcCarStartState next_state)
-  {
-    if (rc_car_start_state_ == next_state) {
-      return;
-    }
-    rc_car_start_state_ = next_state;
-    RCLCPP_INFO(this->get_logger(), "RC car start state: %d", static_cast<int>(next_state));
-  }
-
-  PwmCommand make_rc_car_start_command(const Pose2D & follower)
-  {
-    switch (rc_car_start_state_) {
-      case RcCarStartState::Inactive:
-        transition_rc_car_start(RcCarStartState::TurnCcw90);
+      if (!align_rc_car_a_stop_yaw_ ||
+        std::abs(target_yaw_error) <= direct_target_heading_deadband_)
+      {
         return PwmCommand{0, 0};
-      case RcCarStartState::TurnCcw90: {
-          if (!rc_car_start_turn_target_yaw_.has_value()) {
-            rc_car_start_turn_target_yaw_ =
-              normalize_angle(follower.yaw + std::abs(turn_ccw_90_radians_));
-          }
-          const double heading_error =
-            normalize_angle(rc_car_start_turn_target_yaw_.value() - follower.yaw);
-          if (std::abs(heading_error) <= turn_ccw_90_yaw_tolerance_) {
-            rc_car_start_turn_target_yaw_.reset();
-            transition_rc_car_start(RcCarStartState::RotateToStart);
-            return PwmCommand{0, 0};
-          }
-          if (heading_error > 0.0) {
-            return PwmCommand{-turn_ccw_90_pwm_, turn_ccw_90_pwm_};
-          }
-          return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
-        }
-      case RcCarStartState::RotateToStart: {
-          const double target_heading =
-            std::atan2(initial_rc_y_ - follower.y, initial_rc_x_ - follower.x);
-          const double heading_error = normalize_angle(target_heading - follower.yaw);
-          if (std::abs(heading_error) <= rc_car_start_yaw_tolerance_) {
-            transition_rc_car_start(RcCarStartState::DriveToStart);
-            return PwmCommand{0, 0};
-          }
-          return make_rc_car_start_turn_command(heading_error);
-        }
-      case RcCarStartState::DriveToStart: {
-          const double distance = distance_to_target(follower, initial_rc_x_, initial_rc_y_);
-          if (distance <= rc_car_start_position_tolerance_) {
-            transition_rc_car_start(RcCarStartState::AlignStartYaw);
-            return PwmCommand{0, 0};
-          }
-          const double target_heading =
-            std::atan2(initial_rc_y_ - follower.y, initial_rc_x_ - follower.x);
-          const double heading_error = normalize_angle(target_heading - follower.yaw);
-          if (std::abs(heading_error) > rc_car_start_yaw_tolerance_) {
-            return make_rc_car_start_turn_command(heading_error);
-          }
-          return apply_turn_to_pwm(
-            rc_car_start_forward_pwm_,
-            heading_error,
-            rc_car_start_drive_turn_pwm_delta_);
-        }
-      case RcCarStartState::AlignStartYaw: {
-          const double heading_error = normalize_angle(initial_rc_yaw_ - follower.yaw);
-          if (std::abs(heading_error) <= rc_car_start_yaw_tolerance_) {
-            transition_rc_car_start(RcCarStartState::Complete);
-            return PwmCommand{0, 0};
-          }
-          return make_rc_car_start_turn_command(heading_error);
-        }
-      case RcCarStartState::Complete:
-        mode_ = FollowerMode::Stop;
-        rc_car_start_state_ = RcCarStartState::Inactive;
-        return PwmCommand{0, 0};
+      }
+      return make_in_place_turn_command(target_yaw_error);
     }
-    return PwmCommand{0, 0};
+
+    if (std::abs(heading_error) > direct_target_turn_in_place_heading_) {
+      return make_in_place_turn_command(heading_error);
+    }
+
+    const int forward_pwm = calculate_direct_forward_pwm(distance);
+    return apply_turn_to_pwm(forward_pwm, heading_error);
   }
 
   PwmCommand make_return_command(double distance, double heading_error) const
@@ -1508,6 +1231,13 @@ private:
       leader_speed_gain_pwm_ * effective_leader_speed() +
       distance_gain_pwm_ * distance_error;
     return std::clamp(static_cast<int>(std::lround(pwm)), min_forward_pwm_, max_forward_pwm_);
+  }
+
+  int calculate_direct_forward_pwm(double distance) const
+  {
+    const double pwm =
+      static_cast<double>(slow_forward_pwm_) + distance_gain_pwm_ * distance;
+    return std::clamp(static_cast<int>(std::lround(pwm)), min_forward_pwm_, base_forward_pwm_);
   }
 
   PwmCommand make_in_place_turn_command(double heading_error) const
@@ -1701,8 +1431,6 @@ private:
   double right_meters_per_tick_{-0.012};
   bool enable_command_odom_fallback_{true};
   double encoder_timeout_seconds_{0.50};
-  double encoder_startup_settle_seconds_{1.0};
-  bool require_encoder_baseline_{true};
   double max_pwm_wheel_speed_{0.24};
   double leader_turn_assist_heading_{0.35};
   double command_resend_period_seconds_{0.25};
@@ -1737,23 +1465,17 @@ private:
   double intersection_1_turn_radius_{0.35};
   double intersection_1_turn_seconds_{1.20};
   std::string intersection_1_left_turn_command_{"3"};
-  bool enable_intersection_1_turn_assist_{true};
-  double intersection_1_turn_assist_radius_{0.45};
-  double intersection_1_turn_assist_yaw_tolerance_{0.25};
-  double intersection_1_turn_assist_max_progress_{0.45};
-  double intersection_1_turn_assist_lateral_tolerance_{0.35};
   double a_entry_x_{1.2001334428787231};
   double a_entry_y_{-0.001835942268371582};
-  double staged_yaw_tolerance_{0.12};
-  int staged_turn_pwm_{70};
-  double turn_ccw_90_radians_{M_PI / 2.0};
-  double turn_ccw_90_yaw_tolerance_{0.08};
-  int turn_ccw_90_pwm_{70};
-  double rc_car_start_position_tolerance_{0.20};
-  double rc_car_start_yaw_tolerance_{0.15};
-  int rc_car_start_forward_pwm_{85};
-  int rc_car_start_turn_pwm_{70};
-  int rc_car_start_drive_turn_pwm_delta_{18};
+  double rc_car_a_stop_x_{0.7064711451530457};
+  double rc_car_a_stop_y_{0.29016929864883423};
+  double rc_car_a_stop_yaw_{2.97};
+  double rc_car_a_stop_tolerance_{0.12};
+  double rc_car_a_stop_pass_distance_{0.08};
+  double rc_car_a_stop_pass_radius_{0.55};
+  double direct_target_heading_deadband_{0.25};
+  double direct_target_turn_in_place_heading_{0.55};
+  bool align_rc_car_a_stop_yaw_{false};
 
   std::optional<Pose2D> leader_pose_;
   std::optional<Pose2D> follower_pose_;
@@ -1771,19 +1493,13 @@ private:
   rclcpp::Time last_command_sent_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_encoder_stamp_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_encoder_motion_stamp_{0, 0, RCL_ROS_TIME};
-  rclcpp::Time serial_connected_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_odom_integrated_stamp_{0, 0, RCL_ROS_TIME};
   rclcpp::Time intersection_1_left_turn_end_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time intersection_1_left_turn_requested_at_{0, 0, RCL_ROS_TIME};
   bool intersection_1_left_turn_pending_{false};
   bool intersection_1_left_turn_active_{false};
   bool intersection_1_left_turn_completed_{false};
-  bool turn_ccw_90_completed_{false};
-  bool encoder_ready_{false};
-  bool encoder_startup_settle_logged_{false};
-  std::optional<double> turn_ccw_90_target_yaw_;
-  std::optional<double> rc_car_start_turn_target_yaw_;
-  RcCarStartState rc_car_start_state_{RcCarStartState::Inactive};
+  bool rc_car_a_stop_direct_complete_{false};
   PwmCommand last_sent_pwm_command_;
   double encoder_balance_trim_pwm_{0.0};
   std::string last_command_;

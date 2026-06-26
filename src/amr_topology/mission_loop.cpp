@@ -106,15 +106,13 @@ public:
     this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<bool>("enable_lidar_safety", true);
-    this->declare_parameter<int>("repeat_count", 2);
+    this->declare_parameter<int>("repeat_count", 1);
     this->declare_parameter<double>("wait_seconds", 3.0);
     this->declare_parameter<double>("precision_wait_seconds", 5.0);
     this->declare_parameter<double>("goal_tolerance", 0.08);
     this->declare_parameter<double>("precision_goal_tolerance", 0.04);
     this->declare_parameter<double>("waypoint_tolerance", 0.22);
     this->declare_parameter<double>("yaw_tolerance", 0.08);
-    this->declare_parameter<bool>("stop_rc_car_on_a_leader_slot_ccw_yaw", false);
-    this->declare_parameter<double>("rc_car_a_slot_stop_yaw_delta", M_PI / 3.0);
     this->declare_parameter<double>("max_linear_speed", 0.14);
     this->declare_parameter<double>("max_angular_speed", 0.45);
     this->declare_parameter<double>("linear_gain", 0.70);
@@ -171,6 +169,7 @@ public:
     this->declare_parameter<double>("corridor_min_passage_width", 0.45);
     this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
     this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
+    this->declare_parameter<double>("rc_car_intersection_1_prepare_distance", 0.85);
 
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
@@ -183,10 +182,6 @@ public:
     precision_goal_tolerance_ = this->get_parameter("precision_goal_tolerance").as_double();
     waypoint_tolerance_ = this->get_parameter("waypoint_tolerance").as_double();
     yaw_tolerance_ = this->get_parameter("yaw_tolerance").as_double();
-    stop_rc_car_on_a_leader_slot_ccw_yaw_ =
-      this->get_parameter("stop_rc_car_on_a_leader_slot_ccw_yaw").as_bool();
-    rc_car_a_slot_stop_yaw_delta_ = std::max(
-      0.0, this->get_parameter("rc_car_a_slot_stop_yaw_delta").as_double());
     max_linear_speed_ = this->get_parameter("max_linear_speed").as_double();
     max_angular_speed_ = this->get_parameter("max_angular_speed").as_double();
     linear_gain_ = this->get_parameter("linear_gain").as_double();
@@ -236,6 +231,8 @@ public:
       this->get_parameter("corridor_hard_stop_width").as_double();
     corridor_max_lateral_offset_ =
       this->get_parameter("corridor_max_lateral_offset").as_double();
+    rc_car_intersection_1_prepare_distance_ =
+      this->get_parameter("rc_car_intersection_1_prepare_distance").as_double();
 
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
@@ -319,34 +316,43 @@ public:
 
     for (int cycle = 1; cycle <= repeat_count_ && rclcpp::ok(); ++cycle) {
       RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to A", cycle, repeat_count_);
-      publish_rc_car_mode("follow");
+      publish_rc_car_mode("slot_wait_a");
       go_path({"loading", "intersection_1", "a_entry", "a_leader_slot"});
       if (!rclcpp::ok()) {
         return;
       }
-      wait_at_slot("A", "a_entry");
+      wait_at_slot_for_rc_car("A", "a_entry", "a");
       if (!rclcpp::ok()) {
         return;
       }
       publish_rc_car_mode("stop");
-      hold_at_leader_slot("A leader slot");
+      run_precision_slot_mission("A", "a_leader_slot_precision", "a_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
+      publish_rc_car_mode("return");
+      return_to_loading({"a_leader_slot_precision", "a_entry", "intersection_1", "loading"});
       if (!rclcpp::ok()) {
         return;
       }
 
       RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to B", cycle, repeat_count_);
-      publish_rc_car_mode("follow");
+      publish_rc_car_mode("slot_wait_b");
       go_path({"loading", "intersection_2", "b_entry", "b_leader_slot"});
       if (!rclcpp::ok()) {
         return;
       }
-      publish_rc_car_mode("stop");
-      wait_at_slot("B", "b_entry");
+      wait_at_slot_for_rc_car("B", "b_entry", "b");
       if (!rclcpp::ok()) {
         return;
       }
       publish_rc_car_mode("stop");
-      hold_at_leader_slot("B leader slot");
+      run_precision_slot_mission("B", "b_leader_slot_precision", "b_entry");
+      if (!rclcpp::ok()) {
+        return;
+      }
+      publish_rc_car_mode("return");
+      return_to_loading({"b_leader_slot_precision", "b_entry", "intersection_2", "loading"});
     }
 
     publish_rc_car_mode("stop");
@@ -388,6 +394,7 @@ private:
       const auto & target = nodes_.at(target_name);
       const double distance = distance_to_target(pose.value(), target);
       const double tolerance = is_final ? goal_tolerance_ : waypoint_tolerance_;
+      update_rc_car_intersection_1_prepare(target_name, distance);
 
       if (mppi_rescue_active_) {
         const double rescue_elapsed = (this->now() - mppi_rescue_started_at_).seconds();
@@ -467,20 +474,6 @@ private:
           ++target_index;
           continue;
         }
-      }
-
-      if (
-        enable_lidar_safety_ &&
-        is_blocking_target_node(target_name) &&
-        local_planner_.target_is_blocked(
-          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
-          amr_topology::Target2D{target.x, target.y},
-          this->now()))
-      {
-        wait_for_blocked_target_clear(target_name, target);
-        local_planner_.reset();
-        rate.sleep();
-        continue;
       }
 
       if (is_final && distance <= tolerance) {
@@ -615,7 +608,7 @@ private:
   bool is_leader_slot(const std::string & node_name) const
   {
     return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
-      node_name == "b_leader_slot_precision";
+      node_name == "a_leader_slot_precision" || node_name == "b_leader_slot_precision";
   }
 
   bool is_entry_node(const std::string & node_name) const
@@ -635,10 +628,22 @@ private:
       node.type == "standby" || node.type == "waypoint";
   }
 
-  bool is_blocking_target_node(const std::string & node_name) const
+  void update_rc_car_intersection_1_prepare(
+    const std::string & target_name,
+    double distance)
   {
-    return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
-      node_name == "b_leader_slot_precision";
+    if (last_rc_car_mode_ != "follow" && last_rc_car_mode_ != "turn_prepare_left") {
+      return;
+    }
+
+    if (target_name == "intersection_1" && distance <= rc_car_intersection_1_prepare_distance_) {
+      publish_rc_car_mode("turn_prepare_left");
+      return;
+    }
+
+    if (last_rc_car_mode_ == "turn_prepare_left") {
+      publish_rc_car_mode("follow");
+    }
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
@@ -1016,36 +1021,44 @@ private:
     local_planner_.update_map(*msg);
   }
 
-  void wait_for_blocked_target_clear(
-    const std::string & target_name,
-    const MissionNode & target)
+  void run_precision_slot_mission(
+    const std::string & slot_name,
+    const std::string & precision_node_name,
+    const std::string & exit_node_name)
   {
-    RCLCPP_WARN(
+    RCLCPP_INFO(
       this->get_logger(),
-      "Task target %s is blocked; stopping until the obstacle is cleared",
-      target_name.c_str());
-    stop();
+      "Moving to %s precision slot %s",
+      slot_name.c_str(),
+      precision_node_name.c_str());
 
-    rclcpp::Rate rate(10.0);
+    go_to_precision_slot(precision_node_name);
+    rotate_to_node_yaw(precision_node_name);
+    wait_stopped(slot_name + " precision slot", precision_wait_seconds_);
+    rotate_to_face(exit_node_name);
+  }
+
+  void go_to_precision_slot(const std::string & target_node_name)
+  {
+    const auto & target = nodes_.at(target_node_name);
+    rclcpp::Rate rate(20.0);
+
     while (rclcpp::ok()) {
       rclcpp::spin_some(this->get_node_base_interface());
-      stop();
-
       const auto pose = lookup_robot_pose();
-      if (pose.has_value()) {
-        const bool still_blocked = local_planner_.target_is_blocked(
-          amr_topology::Pose2D{pose->x, pose->y, pose->yaw},
-          amr_topology::Target2D{target.x, target.y},
-          this->now());
-        if (!still_blocked) {
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Task target %s is clear; resuming mission",
-            target_name.c_str());
-          return;
-        }
+      if (!pose.has_value()) {
+        rate.sleep();
+        continue;
       }
 
+      const double distance = distance_to_target(pose.value(), target);
+      if (distance <= precision_goal_tolerance_) {
+        stop();
+        RCLCPP_INFO(this->get_logger(), "Reached %s precisely", target_node_name.c_str());
+        return;
+      }
+
+      cmd_pub_->publish(make_drive_command(pose.value(), target, true));
       rate.sleep();
     }
   }
@@ -1271,21 +1284,8 @@ private:
     stop();
     RCLCPP_INFO(
       this->get_logger(),
-      "RC car reached %s staging point; holding at leader slot",
+      "RC car reached %s staging point; continuing to precision slot",
       slot_name.c_str());
-  }
-
-  void hold_at_leader_slot(const std::string & label)
-  {
-    stop();
-    RCLCPP_INFO(this->get_logger(), "Holding at %s until shutdown", label.c_str());
-
-    rclcpp::Rate rate(10.0);
-    while (rclcpp::ok()) {
-      rclcpp::spin_some(this->get_node_base_interface());
-      stop();
-      rate.sleep();
-    }
   }
 
   void wait_stopped(const std::string & label, double seconds)
@@ -1346,35 +1346,12 @@ private:
     RCLCPP_INFO(this->get_logger(), "Rotating in place to %s yaw", label.c_str());
 
     rclcpp::Rate rate(20.0);
-    std::optional<double> start_yaw;
-    bool rc_car_stop_sent_for_yaw_delta = false;
     while (rclcpp::ok()) {
       rclcpp::spin_some(this->get_node_base_interface());
       const auto pose = lookup_robot_pose();
       if (!pose.has_value()) {
         rate.sleep();
         continue;
-      }
-
-      if (!start_yaw.has_value()) {
-        start_yaw = pose->yaw;
-      }
-
-      if (
-        stop_rc_car_on_a_leader_slot_ccw_yaw_ &&
-        label == "a_leader_slot" &&
-        !rc_car_stop_sent_for_yaw_delta)
-      {
-        const double ccw_yaw_delta = normalize_angle(pose->yaw - start_yaw.value());
-        if (ccw_yaw_delta >= rc_car_a_slot_stop_yaw_delta_) {
-          publish_rc_car_mode("stop");
-          rc_car_stop_sent_for_yaw_delta = true;
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Stopping RC car after %.2f rad CCW rotation at %s",
-            ccw_yaw_delta,
-            label.c_str());
-        }
       }
 
       const double yaw_error = normalize_angle(target_yaw - pose->yaw);
@@ -1452,9 +1429,6 @@ private:
     if (last_rc_car_mode_.empty()) {
       return;
     }
-    if (last_rc_car_mode_ == "turn_ccw_90") {
-      return;
-    }
 
     std_msgs::msg::String msg;
     msg.data = last_rc_car_mode_;
@@ -1466,15 +1440,13 @@ private:
   std::string base_frame_;
   std::unordered_map<std::string, MissionNode> nodes_;
 
-  int repeat_count_{2};
+  int repeat_count_{1};
   double wait_seconds_{3.0};
   double precision_wait_seconds_{5.0};
   double goal_tolerance_{0.08};
   double precision_goal_tolerance_{0.04};
   double waypoint_tolerance_{0.22};
   double yaw_tolerance_{0.08};
-  bool stop_rc_car_on_a_leader_slot_ccw_yaw_{false};
-  double rc_car_a_slot_stop_yaw_delta_{M_PI / 3.0};
   double max_linear_speed_{0.14};
   double max_angular_speed_{0.45};
   double linear_gain_{0.70};
@@ -1506,6 +1478,7 @@ private:
   double corridor_min_passage_width_{0.45};
   double corridor_hard_stop_width_{0.40};
   double corridor_max_lateral_offset_{0.24};
+  double rc_car_intersection_1_prepare_distance_{0.85};
   bool enable_lidar_safety_{true};
   bool enable_mppi_rescue_{true};
   bool enable_corridor_pass_{true};

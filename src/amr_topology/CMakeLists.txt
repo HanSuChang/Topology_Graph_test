@@ -15,9 +15,8 @@ find_package(rclcpp_action REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(visualization_msgs REQUIRED)
+find_package(turtlebot3_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
-find_package(OpenCV REQUIRED)
 
 add_executable(topology_follower src/topology_follower.cpp)
 target_compile_features(topology_follower PUBLIC cxx_std_17)
@@ -30,18 +29,6 @@ ament_target_dependencies(
   tf2_ros
 )
 target_link_libraries(topology_follower yaml-cpp)
-
-add_executable(topology_marker_node src/topology_marker_node.cpp)
-target_compile_features(topology_marker_node PUBLIC cxx_std_17)
-ament_target_dependencies(
-  topology_marker_node
-  ament_index_cpp
-  geometry_msgs
-  rclcpp
-  std_msgs
-  visualization_msgs
-)
-target_link_libraries(topology_marker_node yaml-cpp)
 
 add_executable(
   mission_loop
@@ -64,6 +51,7 @@ ament_target_dependencies(
   sensor_msgs
   std_msgs
   tf2_ros
+  turtlebot3_msgs
 )
 target_link_libraries(mission_loop yaml-cpp)
 
@@ -79,42 +67,10 @@ ament_target_dependencies(
 )
 target_link_libraries(rc_car_follower_node yaml-cpp)
 
-add_executable(image_rotate_node src/image_rotate_node.cpp)
-target_compile_features(image_rotate_node PUBLIC cxx_std_17)
-ament_target_dependencies(
-  image_rotate_node
-  rclcpp
-  sensor_msgs
-)
-
-add_executable(image_rotate_compress_node src/image_rotate_compress_node.cpp)
-target_compile_features(image_rotate_compress_node PUBLIC cxx_std_17)
-ament_target_dependencies(
-  image_rotate_compress_node
-  rclcpp
-  sensor_msgs
-)
-target_link_libraries(image_rotate_compress_node ${OpenCV_LIBS})
-
-add_executable(aruco_marker_detector_node src/aruco_marker_detector_node.cpp)
-target_compile_features(aruco_marker_detector_node PUBLIC cxx_std_17)
-ament_target_dependencies(
-  aruco_marker_detector_node
-  geometry_msgs
-  rclcpp
-  sensor_msgs
-  std_msgs
-)
-target_link_libraries(aruco_marker_detector_node ${OpenCV_LIBS})
-
 install(TARGETS
   topology_follower
-  topology_marker_node
   mission_loop
   rc_car_follower_node
-  image_rotate_node
-  image_rotate_compress_node
-  aruco_marker_detector_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
