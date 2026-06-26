@@ -1492,8 +1492,10 @@ private:
       return;
     }
 
-    const double start_yaw = start_pose->yaw;
+    double last_yaw = start_pose->yaw;
+    double rotated = 0.0;
     const double target_delta = std::abs(delta_yaw);
+    constexpr double kYawDeltaDeadband = 0.002;
     RCLCPP_INFO(
       this->get_logger(),
       "Rotating CCW %.2f rad for %s",
@@ -1509,9 +1511,10 @@ private:
         continue;
       }
 
-      double rotated = normalize_angle(pose->yaw - start_yaw);
-      if (rotated < 0.0) {
-        rotated += 2.0 * M_PI;
+      const double delta = normalize_angle(pose->yaw - last_yaw);
+      last_yaw = pose->yaw;
+      if (delta > kYawDeltaDeadband) {
+        rotated += delta;
       }
 
       const double remaining = target_delta - rotated;
