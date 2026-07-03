@@ -1,0 +1,15 @@
+[0.006s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.033s] Consolidate compiler generated dependencies of target mission_loop
+[0.041s] [ 75%] Built target topology_follower
+[0.041s] [ 75%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[1.509s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::can_resume_mission_drive(const RobotPose2D&, const MissionNode&) const’:
+[1.509s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1046:55: error: passing ‘const MissionLoop’ as ‘this’ argument discards qualifiers [-fpermissive]
+[1.509s]  1046 |     const auto next_drive_command = make_drive_command(pose, target, false);
+[1.509s]       |                                     ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+[1.509s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:369:29: note:   in call to ‘geometry_msgs::msg::Twist MissionLoop::make_drive_command(const RobotPose2D&, const MissionNode&, bool)’
+[1.509s]   369 |   geometry_msgs::msg::Twist make_drive_command(
+[1.509s]       |                             ^~~~~~~~~~~~~~~~~~
+[4.374s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[4.374s] gmake[1]: *** [CMakeFiles/Makefile2:165: CMakeFiles/mission_loop.dir/all] Error 2
+[4.374s] gmake: *** [Makefile:146: all] Error 2
+[30.024s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

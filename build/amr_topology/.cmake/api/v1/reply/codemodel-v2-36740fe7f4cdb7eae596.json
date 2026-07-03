@@ -1,0 +1,133 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-c9c068937d65b664e0e9.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "amr_topology",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "amr_topology_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-amr_topology_uninstall-Release-e3e9c56db1243306c874.json",
+					"name" : "amr_topology_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "aruco_marker_detector_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-aruco_marker_detector_node-Release-8a4e400ddc5761f9f54f.json",
+					"name" : "aruco_marker_detector_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "image_rotate_compress_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-image_rotate_compress_node-Release-59e3b4bfd98641aa68fc.json",
+					"name" : "image_rotate_compress_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "image_rotate_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-image_rotate_node-Release-179ec07c469546501efb.json",
+					"name" : "image_rotate_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "mission_loop::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-mission_loop-Release-c49985f8330f7c14a454.json",
+					"name" : "mission_loop",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "rc_car_follower_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rc_car_follower_node-Release-b5a48dad8b72049e5bd5.json",
+					"name" : "rc_car_follower_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "topology_follower::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-topology_follower-Release-ffc762aaa486a1c6e154.json",
+					"name" : "topology_follower",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "topology_marker_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-topology_marker_node-Release-ca027279851c242a68f3.json",
+					"name" : "topology_marker_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-Release-c70d3f40dba624fab064.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology",
+		"source" : "/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

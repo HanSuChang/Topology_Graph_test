@@ -1,0 +1,4 @@
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘geometry_msgs::msg::Twist MissionLoop::make_drive_command(const RobotPose2D&, const PathPoint&, double, bool)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:311:18: warning: unused variable ‘distance’ [-Wunused-variable]
+  311 |     const double distance = std::hypot(dx, dy);
+      |                  ^~~~~~~~

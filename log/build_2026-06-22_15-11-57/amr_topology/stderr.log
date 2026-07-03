@@ -1,0 +1,7 @@
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/topology_marker_node.cpp:10:10: fatal error: visualization_msgs/msg/marker.hpp: No such file or directory
+   10 | #include <visualization_msgs/msg/marker.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/topology_marker_node.dir/build.make:76: CMakeFiles/topology_marker_node.dir/src/topology_marker_node.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:169: CMakeFiles/topology_marker_node.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

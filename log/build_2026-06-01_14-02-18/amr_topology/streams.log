@@ -1,0 +1,35 @@
+[30.033s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[30.068s] Consolidate compiler generated dependencies of target mission_loop
+[30.071s] [ 40%] Built target topology_follower
+[30.077s] [ 60%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[39.038s] [ 80%] Linking CXX executable mission_loop
+[39.472s] [100%] Built target mission_loop
+[39.481s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[39.488s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --install /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology
+[39.492s] -- Install configuration: ""
+[39.492s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/lib/amr_topology/topology_follower
+[39.492s] -- Installing: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/lib/amr_topology/mission_loop
+[39.496s] -- Set runtime path of "/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/lib/amr_topology/mission_loop" to ""
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/config
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/config/topology.yaml
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/launch
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/launch/map_server.launch.py
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/maps
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/maps/map.pgm
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/maps/map.yaml
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/ament_index/resource_index/package_run_dependencies/amr_topology
+[39.496s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/ament_index/resource_index/parent_prefix_path/amr_topology
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/ament_prefix_path.sh
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/ament_prefix_path.dsv
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/path.sh
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/path.dsv
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.bash
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.sh
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.zsh
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.dsv
+[39.497s] -- Installing: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/package.dsv
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/ament_index/resource_index/packages/amr_topology
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/cmake/amr_topologyConfig.cmake
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/cmake/amr_topologyConfig-version.cmake
+[39.497s] -- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/package.xml
+[60.049s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --install /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology

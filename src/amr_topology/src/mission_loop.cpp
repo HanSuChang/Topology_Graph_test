@@ -188,7 +188,6 @@ public:
     this->declare_parameter<double>("aruco_approach_angular_gain", 0.40);
     this->declare_parameter<double>("aruco_stop_distance", 0.28);
     this->declare_parameter<double>("aruco_detection_timeout_seconds", 0.6);
-
     topology_file_ = this->get_parameter("topology_file").as_string();
     map_frame_ = this->get_parameter("map_frame").as_string();
     base_frame_ = this->get_parameter("base_frame").as_string();
@@ -268,7 +267,6 @@ public:
     aruco_stop_distance_ = this->get_parameter("aruco_stop_distance").as_double();
     aruco_detection_timeout_seconds_ =
       this->get_parameter("aruco_detection_timeout_seconds").as_double();
-
     amr_topology::LocalPlannerOptions planner_options;
     planner_options.emergency_stop_distance =
       this->get_parameter("obstacle_emergency_stop_distance").as_double();
@@ -358,7 +356,7 @@ public:
 
   void run()
   {
-    RCLCPP_INFO(this->get_logger(), "Starting A/B return mission loop");
+    RCLCPP_INFO(this->get_logger(), "Starting A-only mission loop");
 
     for (int cycle = 1; cycle <= repeat_count_ && rclcpp::ok(); ++cycle) {
       RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to A", cycle, repeat_count_);
@@ -381,27 +379,15 @@ public:
         return;
       }
       if (enable_a_slot_aruco_follow_) {
-        aruco_follow_after_a_leader_slot();
+        aruco_follow_after_leader_slot("a_leader_slot", "A");
       } else {
-        hold_at_leader_slot("A leader slot");
+        wait_stopped("A leader slot", wait_seconds_);
       }
-      if (!rclcpp::ok()) {
-        return;
-      }
-
-      RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to B", cycle, repeat_count_);
-      publish_rc_car_mode("follow");
-      go_path({"loading", "intersection_2", "b_entry", "b_leader_slot"});
       if (!rclcpp::ok()) {
         return;
       }
       publish_rc_car_mode("stop");
-      wait_at_slot("B", "b_entry");
-      if (!rclcpp::ok()) {
-        return;
-      }
-      publish_rc_car_mode("stop");
-      hold_at_leader_slot("B leader slot");
+      hold_at_leader_slot("A leader slot");
     }
 
     publish_rc_car_mode("stop");
@@ -431,6 +417,7 @@ private:
 
     while (rclcpp::ok() && target_index < path.size()) {
       rclcpp::spin_some(this->get_node_base_interface());
+      publish_scheduled_rc_car_mode();
       const auto pose = lookup_robot_pose();
       if (!pose.has_value()) {
         rate.sleep();
@@ -669,20 +656,19 @@ private:
 
   bool is_leader_slot(const std::string & node_name) const
   {
-    return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
-      node_name == "b_leader_slot_precision";
+    return node_name == "a_leader_slot";
   }
 
   bool is_entry_node(const std::string & node_name) const
   {
-    return node_name == "a_entry" || node_name == "b_entry";
+    return node_name == "a_entry";
   }
 
   bool is_skippable_node(const std::string & node_name, const MissionNode & node) const
   {
     if (
-      node_name == "intersection_1" || node_name == "intersection_2" ||
-      node_name == "a_entry" || node_name == "b_entry")
+      node_name == "intersection_1" ||
+      node_name == "a_entry")
     {
       return true;
     }
@@ -692,8 +678,7 @@ private:
 
   bool is_blocking_target_node(const std::string & node_name) const
   {
-    return node_name == "a_leader_slot" || node_name == "b_leader_slot" ||
-      node_name == "b_leader_slot_precision";
+    return node_name == "a_leader_slot";
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
@@ -1007,13 +992,6 @@ private:
     last_mppi_rescue_lateral_offset_ = 0.0;
   }
 
-  void return_to_loading(const std::vector<std::string> & path)
-  {
-    go_path(path);
-    publish_rc_car_mode("stop");
-    wait_stopped("loading", precision_wait_seconds_);
-  }
-
   void wait_for_charger_request()
   {
     stop();
@@ -1058,24 +1036,21 @@ private:
 
   void handle_rc_car_odom(const nav_msgs::msg::Odometry::SharedPtr msg)
   {
-    if (!rc_a_stop_monitoring_ || rc_a_stop_sent_) {
-      return;
+    if (rc_a_stop_monitoring_ && !rc_a_stop_sent_) {
+      const double dx = msg->pose.pose.position.x - rc_a_stop_x_;
+      const double dy = msg->pose.pose.position.y - rc_a_stop_y_;
+      const double distance = std::hypot(dx, dy);
+      if (distance <= rc_a_stop_tolerance_) {
+        rc_a_stop_sent_ = true;
+        publish_rc_car_mode("stop");
+        RCLCPP_INFO(
+          this->get_logger(),
+          "RC car reached rc_a_stop: distance=%.3f tolerance=%.3f; stopping RC car",
+          distance,
+          rc_a_stop_tolerance_);
+      }
     }
 
-    const double dx = msg->pose.pose.position.x - rc_a_stop_x_;
-    const double dy = msg->pose.pose.position.y - rc_a_stop_y_;
-    const double distance = std::hypot(dx, dy);
-    if (distance > rc_a_stop_tolerance_) {
-      return;
-    }
-
-    rc_a_stop_sent_ = true;
-    publish_rc_car_mode("stop");
-    RCLCPP_INFO(
-      this->get_logger(),
-      "RC car reached rc_a_stop: distance=%.3f tolerance=%.3f; stopping RC car",
-      distance,
-      rc_a_stop_tolerance_);
   }
 
   void handle_aruco_target(const geometry_msgs::msg::PointStamped::SharedPtr msg)
@@ -1358,6 +1333,30 @@ private:
       slot_name.c_str());
   }
 
+  void wait_for_rc_car_status(
+    const std::string & expected_status,
+    const std::string & label)
+  {
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Waiting for %s to report %s",
+      label.c_str(),
+      expected_status.c_str());
+
+    while (rclcpp::ok() && last_rc_car_slot_status_ != expected_status) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      stop();
+      rclcpp::sleep_for(100ms);
+    }
+
+    stop();
+    RCLCPP_INFO(
+      this->get_logger(),
+      "%s reported %s",
+      label.c_str(),
+      expected_status.c_str());
+  }
+
   void hold_at_leader_slot(const std::string & label)
   {
     stop();
@@ -1371,9 +1370,14 @@ private:
     }
   }
 
-  void aruco_follow_after_a_leader_slot()
+  void aruco_follow_after_leader_slot(
+    const std::string & leader_slot_name,
+    const std::string & slot_label)
   {
-    RCLCPP_INFO(this->get_logger(), "Starting A leader slot ArUco follow mission");
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Starting %s leader slot ArUco follow mission",
+      slot_label.c_str());
     set_aruco_detection_enabled(true);
     last_aruco_target_.reset();
 
@@ -1414,12 +1418,24 @@ private:
           "Reached RC car ArUco stop distance %.2fm. Stopping and disabling ArUco detection",
           distance);
         set_aruco_detection_enabled(false);
-        rotate_to_node_yaw("a_leader_slot");
-        drive_straight_distance(0.01);
+        rotate_to_node_yaw(leader_slot_name);
         publish_rc_car_mode("turn_ccw_90");
-        wait_stopped("RC car 90 degree turn", 3.0);
+        wait_for_rc_car_status("turn_ccw_90_done", "RC car ArUco turn");
+        publish_rc_car_mode("stop");
         rotate_ccw_relative(M_PI, "after RC car 90 degree turn");
-        hold_at_leader_slot("A leader slot after ArUco follow");
+        drive_straight_distance(-0.03);
+        wait_stopped("post ArUco backward pause", 5.0);
+        drive_straight_distance(0.03);
+        publish_rc_car_mode("turn_ccw_90");
+        wait_for_rc_car_status("turn_ccw_90_done", "RC car second CCW turn");
+        publish_rc_car_mode("drive_to_post_aruco_target");
+        wait_for_rc_car_status("post_aruco_target_arrived", "RC car post ArUco target drive");
+        publish_rc_car_mode("turn_cw_90");
+        wait_for_rc_car_status("turn_cw_90_done", "RC car final CW turn");
+        publish_rc_car_mode("stop");
+        aruco_follow_after_driving_toward_node("a_entry", "post target");
+        release_rc_car_mode_control();
+        publish_rc_car_mode("stop");
         return;
       }
 
@@ -1443,6 +1459,94 @@ private:
       (this->now() - last_aruco_target_time_).seconds() <= aruco_detection_timeout_seconds_;
   }
 
+  void aruco_follow_after_driving_toward_node(
+    const std::string & target_node_name,
+    const std::string & label)
+  {
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Starting %s ArUco follow mission toward %s",
+      label.c_str(),
+      target_node_name.c_str());
+    set_aruco_detection_enabled(true);
+    last_aruco_target_.reset();
+    rotate_to_face(target_node_name);
+
+    rclcpp::Rate rate(20.0);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+      if (aruco_target_is_fresh()) {
+        stop();
+        RCLCPP_INFO(
+          this->get_logger(),
+          "%s ArUco marker detected while driving toward %s. Approaching marker",
+          label.c_str(),
+          target_node_name.c_str());
+        break;
+      }
+
+      const auto pose = lookup_robot_pose();
+      if (!pose.has_value()) {
+        rate.sleep();
+        continue;
+      }
+
+      const auto & target_node = nodes_.at(target_node_name);
+      const double distance = distance_to_target(pose.value(), target_node);
+      const double target_heading = std::atan2(target_node.y - pose->y, target_node.x - pose->x);
+      const double heading_error = normalize_angle(target_heading - pose->yaw);
+
+      geometry_msgs::msg::Twist command;
+      command.linear.x = clamp(linear_gain_ * distance, 0.025, 0.08);
+      command.angular.z = clamp(angular_gain_ * heading_error, -0.18, 0.18);
+      cmd_pub_->publish(command);
+      rate.sleep();
+    }
+
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(this->get_node_base_interface());
+
+      if (!aruco_target_is_fresh()) {
+        geometry_msgs::msg::Twist command;
+        command.angular.z = std::abs(aruco_search_angular_speed_) * 0.5;
+        cmd_pub_->publish(command);
+        rate.sleep();
+        continue;
+      }
+
+      const auto target = last_aruco_target_.value();
+      const double distance = target.point.y;
+      if (distance <= aruco_stop_distance_) {
+        stop();
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Reached %s ArUco stop distance %.2fm. Stopping and disabling ArUco detection",
+          label.c_str(),
+          distance);
+        set_aruco_detection_enabled(false);
+        rotate_to_node_yaw(target_node_name);
+        publish_rc_car_mode("turn_ccw_90");
+        wait_for_rc_car_status("turn_ccw_90_done", "RC car post ArUco turn");
+        publish_rc_car_mode("stop");
+        rotate_ccw_relative(M_PI, "after post ArUco RC car turn");
+        stop();
+        return;
+      }
+
+      geometry_msgs::msg::Twist command;
+      command.linear.x = aruco_approach_linear_speed_;
+      command.angular.z = clamp(
+        -aruco_approach_angular_gain_ * target.point.x,
+        -std::abs(max_angular_speed_),
+        std::abs(max_angular_speed_));
+      cmd_pub_->publish(command);
+      rate.sleep();
+    }
+
+    stop();
+    set_aruco_detection_enabled(false);
+  }
+
   void set_aruco_detection_enabled(bool enabled)
   {
     std_msgs::msg::Bool msg;
@@ -1452,7 +1556,7 @@ private:
 
   void drive_straight_distance(double distance)
   {
-    if (!rclcpp::ok() || distance <= 0.0) {
+    if (!rclcpp::ok() || std::abs(distance) <= 0.0) {
       return;
     }
 
@@ -1461,6 +1565,8 @@ private:
       return;
     }
 
+    const double target_distance = std::abs(distance);
+    const double direction = distance >= 0.0 ? 1.0 : -1.0;
     RCLCPP_INFO(this->get_logger(), "Driving straight %.3fm", distance);
     rclcpp::Rate rate(20.0);
     while (rclcpp::ok()) {
@@ -1472,13 +1578,13 @@ private:
       }
 
       const double traveled = std::hypot(pose->x - start_pose->x, pose->y - start_pose->y);
-      if (traveled >= distance) {
+      if (traveled >= target_distance) {
         stop();
         return;
       }
 
       geometry_msgs::msg::Twist command;
-      command.linear.x = 0.02;
+      command.linear.x = direction * 0.02;
       cmd_pub_->publish(command);
       rate.sleep();
     }
@@ -1552,7 +1658,12 @@ private:
   {
     const auto & target = nodes_.at(target_node_name);
     RCLCPP_INFO(this->get_logger(), "Rotating in place toward %s", target_node_name.c_str());
+    rotate_to_face(target, target_node_name);
+  }
 
+  void rotate_to_face(const MissionNode & target, const std::string & label)
+  {
+    RCLCPP_INFO(this->get_logger(), "Rotating in place toward %s", label.c_str());
     rclcpp::Rate rate(20.0);
     while (rclcpp::ok()) {
       rclcpp::spin_some(this->get_node_base_interface());
@@ -1682,7 +1793,12 @@ private:
       return;
     }
 
-    if (mode == "slot_wait_a" || mode == "slot_wait_b") {
+    if (
+      mode == "slot_wait_a" ||
+      mode == "turn_ccw_90" ||
+      mode == "turn_cw_90" ||
+      mode == "drive_to_post_aruco_target")
+    {
       last_rc_car_slot_status_.clear();
     }
 
@@ -1690,6 +1806,43 @@ private:
     msg.data = mode;
     rc_car_mode_pub_->publish(msg);
     last_rc_car_mode_ = mode;
+  }
+
+  void schedule_rc_car_mode(const std::string & mode, double delay_seconds)
+  {
+    if (delay_seconds <= 0.0) {
+      publish_rc_car_mode(mode);
+      return;
+    }
+
+    scheduled_rc_car_mode_ = mode;
+    scheduled_rc_car_mode_at_ =
+      this->now() + rclcpp::Duration::from_seconds(delay_seconds);
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Scheduled RC car mode %s after %.1f seconds",
+      mode.c_str(),
+      delay_seconds);
+  }
+
+  void publish_scheduled_rc_car_mode()
+  {
+    if (!scheduled_rc_car_mode_.has_value()) {
+      return;
+    }
+    if (this->now() < scheduled_rc_car_mode_at_) {
+      return;
+    }
+
+    const auto mode = scheduled_rc_car_mode_.value();
+    scheduled_rc_car_mode_.reset();
+    publish_rc_car_mode(mode);
+    RCLCPP_INFO(this->get_logger(), "Published scheduled RC car mode %s", mode.c_str());
+  }
+
+  void clear_scheduled_rc_car_mode()
+  {
+    scheduled_rc_car_mode_.reset();
   }
 
   void republish_rc_car_mode()
@@ -1704,6 +1857,11 @@ private:
     std_msgs::msg::String msg;
     msg.data = last_rc_car_mode_;
     rc_car_mode_pub_->publish(msg);
+  }
+
+  void release_rc_car_mode_control()
+  {
+    last_rc_car_mode_.clear();
   }
 
   std::string topology_file_;
@@ -1769,6 +1927,8 @@ private:
   bool charger_parking_requested_{false};
   bool rc_a_stop_monitoring_{false};
   bool rc_a_stop_sent_{false};
+  std::optional<std::string> scheduled_rc_car_mode_;
+  rclcpp::Time scheduled_rc_car_mode_at_{0, 0, RCL_ROS_TIME};
   std::string last_rc_car_mode_;
   std::string last_rc_car_slot_status_;
 

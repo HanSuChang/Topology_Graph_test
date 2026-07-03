@@ -1,0 +1,12 @@
+[0.008s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.041s] Consolidate compiler generated dependencies of target mission_loop
+[0.048s] [ 28%] Built target rc_car_follower_node
+[0.049s] [ 57%] Built target topology_follower
+[0.050s] [ 71%] Linking CXX executable mission_loop
+[0.128s] /usr/bin/ld: /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o: in function `_start':
+[0.128s] (.text+0x1b): undefined reference to `main'
+[0.133s] collect2: error: ld returned 1 exit status
+[0.134s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:246: mission_loop] Error 1
+[0.134s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[0.135s] gmake: *** [Makefile:146: all] Error 2
+[0.137s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

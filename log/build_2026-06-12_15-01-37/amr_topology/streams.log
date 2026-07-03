@@ -1,0 +1,140 @@
+[30.033s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[30.047s] -- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+[30.120s] -- Found ament_index_cpp: 1.4.1 (/opt/ros/humble/share/ament_index_cpp/cmake)
+[30.120s] -- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)
+[30.132s] -- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[30.133s] -- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[30.136s] -- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[30.139s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[30.144s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[30.159s] -- Found nav_msgs: 4.9.1 (/opt/ros/humble/share/nav_msgs/cmake)
+[30.165s] -- Found nav2_msgs: 1.1.20 (/opt/ros/humble/share/nav2_msgs/cmake)
+[30.182s] -- Found rclcpp: 16.0.19 (/opt/ros/humble/share/rclcpp/cmake)
+[30.193s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[30.193s] -- Found rmw_fastrtps_cpp: 6.2.10 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[30.243s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[30.258s] -- Found rclcpp_action: 16.0.19 (/opt/ros/humble/share/rclcpp_action/cmake)
+[30.261s] -- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)
+[30.268s] -- Found tf2_ros: 0.25.20 (/opt/ros/humble/share/tf2_ros/cmake)
+[30.324s] -- Configuring done
+[30.332s] -- Generating done
+[30.335s] -- Build files have been written to: /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology
+[30.352s] Consolidate compiler generated dependencies of target rc_car_follower_node
+[30.352s] Consolidate compiler generated dependencies of target mission_loop
+[30.353s] Consolidate compiler generated dependencies of target topology_follower
+[30.359s] [ 66%] Built target rc_car_follower_node
+[30.359s] [ 66%] Built target topology_follower
+[30.359s] [ 83%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[31.688s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:970:26: error: ‘sensor_msgs’ does not name a type
+[31.688s]   970 |   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+[31.688s]       |                          ^~~~~~~~~~~
+[31.688s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:970:42: error: expected unqualified-id before ‘::’ token
+[31.688s]   970 |   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+[31.688s]       |                                          ^~
+[31.689s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:970:42: error: expected ‘)’ before ‘::’ token
+[31.689s]   970 |   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+[31.689s]       |                   ~                      ^~
+[31.689s]       |                                          )
+[31.692s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:970:39: error: expected ‘;’ at end of member declaration
+[31.692s]   970 |   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+[31.692s]       |                                       ^~~
+[31.692s]       |                                          ;
+[31.694s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:970:44: error: ‘LaserScan’ in namespace ‘::’ does not name a type
+[31.694s]   970 |   void handle_scan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+[31.694s]       |                                            ^~~~~~~~~
+[31.725s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:24: error: ‘sensor_msgs’ was not declared in this scope
+[31.726s]  1489 |   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+[31.726s]       |                        ^~~~~~~~~~~
+[31.726s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:51: error: template argument 1 is invalid
+[31.726s]  1489 |   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+[31.726s]       |                                                   ^
+[31.726s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:51: error: template argument 3 is invalid
+[31.726s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:51: error: template argument 4 is invalid
+[31.726s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:51: error: template argument 5 is invalid
+[31.726s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:54: error: expected ‘;’ at end of member declaration
+[31.726s]  1489 |   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+[31.726s]       |                                                      ^~~~~~~~~
+[31.726s]       |                                                               ;
+[31.727s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1489:64: error: ‘scan_sub_’ does not name a type
+[31.727s]  1489 |   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+[31.727s]       |                                                                ^~~~~~~~~
+[31.741s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1504:17: error: ‘sensor_msgs’ was not declared in this scope
+[31.741s]  1504 |   std::optional<sensor_msgs::msg::LaserScan> last_scan_;
+[31.741s]       |                 ^~~~~~~~~~~
+[31.741s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1504:44: error: template argument 1 is invalid
+[31.742s]  1504 |   std::optional<sensor_msgs::msg::LaserScan> last_scan_;
+[31.742s]       |                                            ^
+[31.761s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+[31.761s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:261:5: error: ‘scan_sub_’ was not declared in this scope
+[31.761s]   261 |     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+[31.761s]       |     ^~~~~~~~~
+[31.765s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:261:43: error: ‘sensor_msgs’ was not declared in this scope
+[31.765s]   261 |     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+[31.765s]       |                                           ^~~~~~~~~~~
+[31.765s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:261:23: error: parse error in template argument list
+[31.765s]   261 |     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+[31.765s]       |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[31.768s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:261:71: error: no matching function for call to ‘MissionLoop::create_subscription<<expression error> >(const string&, rclcpp::SensorDataQoS, std::_Bind_helper<false, void (MissionLoop::*)(...), MissionLoop*, const std::_Placeholder<1>&>::type)’
+[31.769s]   261 |     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+[31.769s]       |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+[31.769s]   262 |       this->get_parameter("scan_topic").as_string(),
+[31.769s]       |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                   
+[31.769s]   263 |       rclcpp::SensorDataQoS(),
+[31.769s]       |       ~~~~~~~~~~~~~~~~~~~~~~~~                                         
+[31.769s]   264 |       std::bind(&MissionLoop::handle_scan, this, std::placeholders::_1));
+[31.769s]       |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[31.769s] In file included from /opt/ros/humble/include/rclcpp/rclcpp/node.hpp:1321,
+[31.769s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executors/single_threaded_executor.hpp:28,
+[31.769s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:22,
+[31.769s]                  from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+[31.769s]                  from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:18:
+[31.769s] /opt/ros/humble/include/rclcpp/rclcpp/node_impl.hpp:92:1: note: candidate: ‘template<class MessageT, class CallbackT, class AllocatorT, class SubscriptionT, class MessageMemoryStrategyT> std::shared_ptr<ROSMessageT> rclcpp::Node::create_subscription(const string&, const rclcpp::QoS&, CallbackT&&, const rclcpp::SubscriptionOptionsWithAllocator<AllocatorT>&, typename MessageMemoryStrategyT::SharedPtr)’
+[31.769s]    92 | Node::create_subscription(
+[31.769s]       | ^~~~
+[31.769s] /opt/ros/humble/include/rclcpp/rclcpp/node_impl.hpp:92:1: note:   template argument deduction/substitution failed:
+[31.769s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:261:71: error: template argument 1 is invalid
+[31.769s]   261 |     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+[31.769s]       |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+[31.769s]   262 |       this->get_parameter("scan_topic").as_string(),
+[31.769s]       |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                   
+[31.770s]   263 |       rclcpp::SensorDataQoS(),
+[31.770s]       |       ~~~~~~~~~~~~~~~~~~~~~~~~                                         
+[31.770s]   264 |       std::bind(&MissionLoop::handle_scan, this, std::placeholders::_1));
+[31.770s]       |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[31.783s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘double MissionLoop::min_scan_range_in_sector(double, double) const’:
+[31.783s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:688:21: error: request for member ‘has_value’ in ‘((const MissionLoop*)this)->MissionLoop::last_scan_’, which is of non-class type ‘const int’
+[31.784s]   688 |     if (!last_scan_.has_value() || last_scan_->ranges.empty()) {
+[31.784s]       |                     ^~~~~~~~~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:688:46: error: base operand of ‘->’ is not a pointer
+[31.784s]   688 |     if (!last_scan_.has_value() || last_scan_->ranges.empty()) {
+[31.784s]       |                                              ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:693:38: error: base operand of ‘->’ is not a pointer
+[31.784s]   693 |     for (size_t i = 0; i < last_scan_->ranges.size(); ++i) {
+[31.784s]       |                                      ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:694:37: error: base operand of ‘->’ is not a pointer
+[31.784s]   694 |       const float range = last_scan_->ranges[i];
+[31.784s]       |                                     ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:695:54: error: base operand of ‘->’ is not a pointer
+[31.784s]   695 |       if (!std::isfinite(range) || range < last_scan_->range_min || range > last_scan_->range_max) {
+[31.784s]       |                                                      ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:695:87: error: base operand of ‘->’ is not a pointer
+[31.784s]   695 |       if (!std::isfinite(range) || range < last_scan_->range_min || range > last_scan_->range_max) {
+[31.784s]       |                                                                                       ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:698:38: error: base operand of ‘->’ is not a pointer
+[31.784s]   698 |       const double angle = last_scan_->angle_min + static_cast<double>(i) * last_scan_->angle_increment;
+[31.784s]       |                                      ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:698:87: error: base operand of ‘->’ is not a pointer
+[31.784s]   698 |       const double angle = last_scan_->angle_min + static_cast<double>(i) * last_scan_->angle_increment;
+[31.784s]       |                                                                                       ^~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::target_direction_is_clear(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&) const’:
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:708:21: error: request for member ‘has_value’ in ‘((const MissionLoop*)this)->MissionLoop::last_scan_’, which is of non-class type ‘const int’
+[31.784s]   708 |     if (!last_scan_.has_value()) {
+[31.784s]       |                     ^~~~~~~~~
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘std::optional<MissionLoop::CorridorPassDecision> MissionLoop::evaluate_corridor_pass() const’:
+[31.784s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:736:47: error: request for member ‘has_value’ in ‘((const MissionLoop*)this)->MissionLoop::last_scan_’, which is of non-class type ‘const int’
+[31.784s]   736 |     if (!enable_corridor_pass_ || !last_scan_.has_value()) {
+[31.784s]       |                                               ^~~~~~~~~
+[33.489s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[33.489s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[33.489s] gmake: *** [Makefile:146: all] Error 2
+[33.491s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

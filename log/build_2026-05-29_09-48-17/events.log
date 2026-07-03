@@ -1,0 +1,134 @@
+[0.000000] (-) TimerEvent: {}
+[0.000164] (amr_topology) JobQueued: {'identifier': 'amr_topology', 'dependencies': OrderedDict()}
+[0.000217] (amr_topology) JobStarted: {'identifier': 'amr_topology'}
+[0.013935] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'cmake'}
+[0.015086] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'build'}
+[0.018373] (amr_topology) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', '--', '-j16', '-l16'], 'cwd': '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('CODEX_CI', '1'), ('USER', 'lee'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/lee'), ('DESKTOP_SESSION', 'ubuntu'), ('NVM_BIN', '/home/lee/.nvm/versions/node/v24.15.0/bin'), ('NVM_INC', '/home/lee/.nvm/versions/node/v24.15.0/include/node'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('PAGER', 'cat'), ('LC_CTYPE', 'C.UTF-8'), ('SYSTEMD_EXEC_PID', '2164'), ('NO_COLOR', '1'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', ''), ('NVM_DIR', '/home/lee/.nvm'), ('COLCON_PREFIX_PATH', '/home/lee/smart_car_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'lee'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'lee'), ('TERM', 'dumb'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/lee/.local/bin:/home/lee/.codex/tmp/arg0/codex-arg0Cygipk:/home/lee/.nvm/versions/node/v24.15.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/path:/home/lee/.nvm/versions/node/v24.15.0/bin:/opt/ros/humble/bin:/home/lee/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/lee-OMEN-Gaming-Laptop-16-ap0xxx:@/tmp/.ICE-unix/1961,unix/lee-OMEN-Gaming-Laptop-16-ap0xxx:/tmp/.ICE-unix/1961'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/794af8a9_6d5a_4d14_bb71_67f49bdcc32b'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('CODEX_SANDBOX_NETWORK_DISABLED', '1'), ('LANG', 'C.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('GH_PAGER', 'cat'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.92'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '27'), ('AMENT_PREFIX_PATH', '/home/lee/smart_car_ws/install/smart_car_py_pkg:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('CODEX_THREAD_ID', '019e7129-52ec-73c2-b32e-10c965006605'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GIT_PAGER', 'cat'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology'), ('LC_ALL', 'C.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('NVM_CD_FLAGS', ''), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/lee/smart_car_ws/install/smart_car_py_pkg/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CODEX_MANAGED_BY_NPM', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble')]), 'shell': False}
+[0.075143] (amr_topology) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.098959] (-) TimerEvent: {}
+[0.177715] (amr_topology) StdoutLine: {'line': b'-- Found ament_index_cpp: 1.4.1 (/opt/ros/humble/share/ament_index_cpp/cmake)\n'}
+[0.178217] (amr_topology) StdoutLine: {'line': b'-- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)\n'}
+[0.200161] (-) TimerEvent: {}
+[0.202319] (amr_topology) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.203888] (amr_topology) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.208884] (amr_topology) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.215888] (amr_topology) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.227934] (amr_topology) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.256380] (amr_topology) StdoutLine: {'line': b'-- Found rclcpp: 16.0.19 (/opt/ros/humble/share/rclcpp/cmake)\n'}
+[0.278854] (amr_topology) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[0.280035] (amr_topology) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.10 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[0.300286] (-) TimerEvent: {}
+[0.361693] (amr_topology) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[0.402848] (-) TimerEvent: {}
+[0.452552] (amr_topology) StdoutLine: {'line': b'-- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)\n'}
+[0.470510] (amr_topology) StdoutLine: {'line': b'-- Found tf2_ros: 0.25.20 (/opt/ros/humble/share/tf2_ros/cmake)\n'}
+[0.502974] (-) TimerEvent: {}
+[0.598586] (amr_topology) StdoutLine: {'line': b'-- Configuring done\n'}
+[0.603100] (-) TimerEvent: {}
+[0.613398] (amr_topology) StdoutLine: {'line': b'-- Generating done\n'}
+[0.619826] (amr_topology) StdoutLine: {'line': b'-- Build files have been written to: /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology\n'}
+[0.646550] (amr_topology) StdoutLine: {'line': b'Consolidate compiler generated dependencies of target topology_follower\n'}
+[0.647381] (amr_topology) StdoutLine: {'line': b'Consolidate compiler generated dependencies of target mission_loop\n'}
+[0.671565] (amr_topology) StdoutLine: {'line': b'[ 50%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o\n'}
+[0.671760] (amr_topology) StdoutLine: {'line': b'[ 50%] Building CXX object CMakeFiles/topology_follower.dir/src/topology_follower.cpp.o\n'}
+[0.703232] (-) TimerEvent: {}
+[0.803472] (-) TimerEvent: {}
+[0.903736] (-) TimerEvent: {}
+[1.004004] (-) TimerEvent: {}
+[1.104263] (-) TimerEvent: {}
+[1.204493] (-) TimerEvent: {}
+[1.304727] (-) TimerEvent: {}
+[1.404998] (-) TimerEvent: {}
+[1.505235] (-) TimerEvent: {}
+[1.605470] (-) TimerEvent: {}
+[1.707028] (-) TimerEvent: {}
+[1.807285] (-) TimerEvent: {}
+[1.907541] (-) TimerEvent: {}
+[2.007826] (-) TimerEvent: {}
+[2.109075] (-) TimerEvent: {}
+[2.209290] (-) TimerEvent: {}
+[2.309484] (-) TimerEvent: {}
+[2.409715] (-) TimerEvent: {}
+[2.509977] (-) TimerEvent: {}
+[2.610241] (-) TimerEvent: {}
+[2.661220] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/topology_follower.cpp: In member function \xe2\x80\x98geometry_msgs::msg::Twist TopologyFollower::make_command(const RobotPose&, const PathPoint&)\xe2\x80\x99:\n'}
+[2.661497] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/topology_follower.cpp:256:55: error: \xe2\x80\x98const struct PathPoint\xe2\x80\x99 has no member named \xe2\x80\x98yaw\xe2\x80\x99\n'}
+[2.661593] (amr_topology) StderrLine: {'line': b'  256 |       const double yaw_error = normalize_angle(target.yaw - pose.yaw);\n'}
+[2.661666] (amr_topology) StderrLine: {'line': b'      |                                                       ^~~\n'}
+[2.710378] (-) TimerEvent: {}
+[2.810628] (-) TimerEvent: {}
+[2.910866] (-) TimerEvent: {}
+[3.011121] (-) TimerEvent: {}
+[3.111363] (-) TimerEvent: {}
+[3.211605] (-) TimerEvent: {}
+[3.311857] (-) TimerEvent: {}
+[3.412086] (-) TimerEvent: {}
+[3.512339] (-) TimerEvent: {}
+[3.612580] (-) TimerEvent: {}
+[3.712824] (-) TimerEvent: {}
+[3.813073] (-) TimerEvent: {}
+[3.913312] (-) TimerEvent: {}
+[4.013543] (-) TimerEvent: {}
+[4.113793] (-) TimerEvent: {}
+[4.215280] (-) TimerEvent: {}
+[4.315502] (-) TimerEvent: {}
+[4.415766] (-) TimerEvent: {}
+[4.516025] (-) TimerEvent: {}
+[4.604944] (amr_topology) StderrLine: {'line': b'gmake[2]: *** [CMakeFiles/topology_follower.dir/build.make:76: CMakeFiles/topology_follower.dir/src/topology_follower.cpp.o] Error 1\n'}
+[4.605253] (amr_topology) StderrLine: {'line': b'gmake[1]: *** [CMakeFiles/Makefile2:139: CMakeFiles/topology_follower.dir/all] Error 2\n'}
+[4.605339] (amr_topology) StderrLine: {'line': b'gmake[1]: *** Waiting for unfinished jobs....\n'}
+[4.616140] (-) TimerEvent: {}
+[4.716347] (-) TimerEvent: {}
+[4.816570] (-) TimerEvent: {}
+[4.916812] (-) TimerEvent: {}
+[5.017057] (-) TimerEvent: {}
+[5.117302] (-) TimerEvent: {}
+[5.217546] (-) TimerEvent: {}
+[5.317779] (-) TimerEvent: {}
+[5.418005] (-) TimerEvent: {}
+[5.518230] (-) TimerEvent: {}
+[5.618438] (-) TimerEvent: {}
+[5.718681] (-) TimerEvent: {}
+[5.818935] (-) TimerEvent: {}
+[5.919191] (-) TimerEvent: {}
+[6.019444] (-) TimerEvent: {}
+[6.119670] (-) TimerEvent: {}
+[6.219854] (-) TimerEvent: {}
+[6.320092] (-) TimerEvent: {}
+[6.420393] (-) TimerEvent: {}
+[6.520672] (-) TimerEvent: {}
+[6.620984] (-) TimerEvent: {}
+[6.722110] (-) TimerEvent: {}
+[6.822315] (-) TimerEvent: {}
+[6.922542] (-) TimerEvent: {}
+[7.022797] (-) TimerEvent: {}
+[7.123017] (-) TimerEvent: {}
+[7.223226] (-) TimerEvent: {}
+[7.323434] (-) TimerEvent: {}
+[7.423655] (-) TimerEvent: {}
+[7.523891] (-) TimerEvent: {}
+[7.624114] (-) TimerEvent: {}
+[7.724350] (-) TimerEvent: {}
+[7.824579] (-) TimerEvent: {}
+[7.924810] (-) TimerEvent: {}
+[8.025055] (-) TimerEvent: {}
+[8.125295] (-) TimerEvent: {}
+[8.225537] (-) TimerEvent: {}
+[8.325793] (-) TimerEvent: {}
+[8.426027] (-) TimerEvent: {}
+[8.526259] (-) TimerEvent: {}
+[8.626477] (-) TimerEvent: {}
+[8.726686] (-) TimerEvent: {}
+[8.826931] (-) TimerEvent: {}
+[8.927130] (-) TimerEvent: {}
+[8.985525] (amr_topology) StdoutLine: {'line': b'[ 75%] Linking CXX executable mission_loop\n'}
+[9.027292] (-) TimerEvent: {}
+[9.127554] (-) TimerEvent: {}
+[9.227818] (-) TimerEvent: {}
+[9.328092] (-) TimerEvent: {}
+[9.413284] (amr_topology) StdoutLine: {'line': b'[ 75%] Built target mission_loop\n'}
+[9.413965] (amr_topology) StderrLine: {'line': b'gmake: *** [Makefile:146: all] Error 2\n'}
+[9.415547] (amr_topology) CommandEnded: {'returncode': 2}
+[9.428203] (-) TimerEvent: {}
+[9.428468] (amr_topology) JobEnded: {'identifier': 'amr_topology', 'rc': 2}
+[9.439235] (-) EventReactorShutdown: {}

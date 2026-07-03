@@ -1,0 +1,16 @@
+[0.007s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.043s] [ 28%] Built target topology_follower
+[0.043s] [ 57%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+[0.043s] [ 71%] Built target rc_car_follower_node
+[0.043s] [ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[1.937s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+[1.937s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:263:21: error: ‘struct amr_topology::LocalPlannerOptions’ has no member named ‘backup_target_distance’
+[1.937s]   263 |     planner_options.backup_target_distance =
+[1.938s]       |                     ^~~~~~~~~~~~~~~~~~~~~~
+[1.938s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:265:21: error: ‘struct amr_topology::LocalPlannerOptions’ has no member named ‘backup_speed’
+[1.938s]   265 |     planner_options.backup_speed =
+[1.938s]       |                     ^~~~~~~~~~~~
+[6.020s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[6.020s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[6.020s] gmake: *** [Makefile:146: all] Error 2
+[6.022s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

@@ -1,0 +1,6 @@
+[ 61%] Built target topology_marker_node
+[ 61%] Built target image_rotate_compress_node
+[ 61%] Building CXX object CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o
+[ 61%] Built target topology_follower
+[ 69%] Built target image_rotate_node
+[ 92%] Built target mission_loop

@@ -1,0 +1,38 @@
+Consolidate compiler generated dependencies of target mission_loop
+[ 57%] Built target topology_follower
+[ 57%] Built target rc_car_follower_node
+[ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:242:5: error: ‘slot_obstacle_watch_radius_’ was not declared in this scope
+  242 |     slot_obstacle_watch_radius_ =
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:244:5: error: ‘slot_obstacle_watch_max_distance_’ was not declared in this scope
+  244 |     slot_obstacle_watch_max_distance_ =
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_path(const std::vector<std::__cxx11::basic_string<char> >&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:467:11: error: ‘wait_for_slot_area_clear’ was not declared in this scope; did you mean ‘wait_for_blocked_target_clear’?
+  467 |           wait_for_slot_area_clear(slot_area.value(), blocked_slot.value());
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~
+      |           wait_for_blocked_target_clear
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:479:9: error: ‘wait_for_slot_area_clear’ was not declared in this scope; did you mean ‘wait_for_blocked_target_clear’?
+  479 |         wait_for_slot_area_clear(slot_area_for_node(target_name).value_or(""), target_name);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~
+      |         wait_for_blocked_target_clear
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::slot_node_has_obstacle_nearby(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&) const’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:731:25: error: ‘slot_obstacle_watch_max_distance_’ was not declared in this scope
+  731 |     if (node_distance > slot_obstacle_watch_max_distance_) {
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:745:51: error: ‘slot_obstacle_watch_radius_’ was not declared in this scope
+  745 |       if (std::hypot(wx - node.x, wy - node.y) <= slot_obstacle_watch_radius_) {
+      |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::wait_for_blocked_target_clear(const string&, const {anonymous}::MissionNode&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1177:36: error: ‘slot_zone_target_is_blocked’ was not declared in this scope
+ 1177 |         const bool still_blocked = slot_zone_target_is_blocked(pose.value(), target);
+      |                                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_to_precision_slot(const string&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1240:9: error: ‘slot_zone_target_is_blocked’ was not declared in this scope
+ 1240 |         slot_zone_target_is_blocked(pose.value(), target))
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

@@ -1,0 +1,86 @@
+[0.000000] (-) TimerEvent: {}
+[0.000099] (amr_topology) JobQueued: {'identifier': 'amr_topology', 'dependencies': OrderedDict()}
+[0.000116] (amr_topology) JobStarted: {'identifier': 'amr_topology'}
+[0.005816] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'cmake'}
+[0.006133] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'build'}
+[0.006516] (amr_topology) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', '--', '-j16', '-l16'], 'cwd': '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('CODEX_CI', '1'), ('USER', 'lee'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/lee'), ('DESKTOP_SESSION', 'ubuntu'), ('NVM_BIN', '/home/lee/.nvm/versions/node/v24.15.0/bin'), ('NVM_INC', '/home/lee/.nvm/versions/node/v24.15.0/include/node'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('PAGER', 'cat'), ('LC_CTYPE', 'C.UTF-8'), ('SYSTEMD_EXEC_PID', '1981'), ('NO_COLOR', '1'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', ''), ('NVM_DIR', '/home/lee/.nvm'), ('COLCON_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install:/home/lee/smart_car_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'lee'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'lee'), ('TERM', 'dumb'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/lee/.local/bin:/home/lee/.nvm/versions/node/v24.15.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/lee/.codex/tmp/arg0/codex-arg0nOyY1W:/home/lee/.nvm/versions/node/v24.15.0/bin:/opt/ros/humble/bin:/home/lee/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/lee-OMEN-Gaming-Laptop-16-ap0xxx:@/tmp/.ICE-unix/1953,unix/lee-OMEN-Gaming-Laptop-16-ap0xxx:/tmp/.ICE-unix/1953'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/e3bd5a21_8380_4837_8be4_ecb2c39502f6'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('CODEX_SANDBOX_NETWORK_DISABLED', '1'), ('LANG', 'C.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('GH_PAGER', 'cat'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.236'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '27'), ('AMENT_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_py_pkg:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('CODEX_THREAD_ID', '019ef801-8114-75e3-8d4f-e7fa7ae560bf'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GIT_PAGER', 'cat'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology'), ('TURTLEBOT3_MODEL', 'waffle_pi'), ('LC_ALL', 'C.UTF-8'), ('CODEX_MANAGED_PACKAGE_ROOT', '/home/lee/.nvm/versions/node/v24.15.0/lib/node_modules/@openai/codex'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('NVM_CD_FLAGS', ''), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/lee/smart_car_ws/install/smart_car_py_pkg/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CODEX_MANAGED_BY_NPM', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble')]), 'shell': False}
+[0.038486] (amr_topology) StdoutLine: {'line': b'[ 61%] Built target topology_marker_node\n'}
+[0.038654] (amr_topology) StdoutLine: {'line': b'[ 61%] Built target image_rotate_compress_node\n'}
+[0.038690] (amr_topology) StdoutLine: {'line': b'[ 61%] Building CXX object CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o\n'}
+[0.038719] (amr_topology) StdoutLine: {'line': b'[ 61%] Built target topology_follower\n'}
+[0.038744] (amr_topology) StdoutLine: {'line': b'[ 69%] Built target image_rotate_node\n'}
+[0.038973] (amr_topology) StdoutLine: {'line': b'[ 92%] Built target mission_loop\n'}
+[0.099335] (-) TimerEvent: {}
+[0.199615] (-) TimerEvent: {}
+[0.299854] (-) TimerEvent: {}
+[0.400096] (-) TimerEvent: {}
+[0.500332] (-) TimerEvent: {}
+[0.600581] (-) TimerEvent: {}
+[0.700827] (-) TimerEvent: {}
+[0.801091] (-) TimerEvent: {}
+[0.901349] (-) TimerEvent: {}
+[1.001586] (-) TimerEvent: {}
+[1.101830] (-) TimerEvent: {}
+[1.202078] (-) TimerEvent: {}
+[1.302328] (-) TimerEvent: {}
+[1.402574] (-) TimerEvent: {}
+[1.477349] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In member function \xe2\x80\x98bool RcCarFollowerNode::rc_has_reached_a_entry(const {anonymous}::Pose2D&)\xe2\x80\x99:\n'}
+[1.477555] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1332:9: error: \xe2\x80\x98reached_a_entry_\xe2\x80\x99 was not declared in this scope; did you mean \xe2\x80\x98rc_has_reached_a_entry\xe2\x80\x99?\n'}
+[1.477743] (amr_topology) StderrLine: {'line': b' 1332 |     if (reached_a_entry_) {\n'}
+[1.477828] (amr_topology) StderrLine: {'line': b'      |         ^~~~~~~~~~~~~~~~\n'}
+[1.477890] (amr_topology) StderrLine: {'line': b'      |         rc_has_reached_a_entry\n'}
+[1.483676] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1337:7: error: \xe2\x80\x98reached_a_entry_\xe2\x80\x99 was not declared in this scope; did you mean \xe2\x80\x98rc_has_reached_a_entry\xe2\x80\x99?\n'}
+[1.483854] (amr_topology) StderrLine: {'line': b' 1337 |       reached_a_entry_ = true;\n'}
+[1.483937] (amr_topology) StderrLine: {'line': b'      |       ^~~~~~~~~~~~~~~~\n'}
+[1.484025] (amr_topology) StderrLine: {'line': b'      |       rc_has_reached_a_entry\n'}
+[1.490094] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In member function \xe2\x80\x98bool RcCarFollowerNode::should_assist_intersection_1_turn(const {anonymous}::Pose2D&) const\xe2\x80\x99:\n'}
+[1.490226] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1376:48: error: \xe2\x80\x98reached_a_entry_\xe2\x80\x99 was not declared in this scope; did you mean \xe2\x80\x98rc_has_reached_a_entry\xe2\x80\x99?\n'}
+[1.490297] (amr_topology) StderrLine: {'line': b' 1376 |     if (!enable_intersection_1_turn_assist_ || reached_a_entry_) {\n'}
+[1.490358] (amr_topology) StderrLine: {'line': b'      |                                                ^~~~~~~~~~~~~~~~\n'}
+[1.490414] (amr_topology) StderrLine: {'line': b'      |                                                rc_has_reached_a_entry\n'}
+[1.497434] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In member function \xe2\x80\x98void RcCarFollowerNode::reset_staged_a_stop()\xe2\x80\x99:\n'}
+[1.497580] (amr_topology) StderrLine: {'line': b'/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1465:5: error: \xe2\x80\x98reached_a_entry_\xe2\x80\x99 was not declared in this scope; did you mean \xe2\x80\x98rc_has_reached_a_entry\xe2\x80\x99?\n'}
+[1.497640] (amr_topology) StderrLine: {'line': b' 1465 |     reached_a_entry_ = false;\n'}
+[1.497689] (amr_topology) StderrLine: {'line': b'      |     ^~~~~~~~~~~~~~~~\n'}
+[1.497735] (amr_topology) StderrLine: {'line': b'      |     rc_has_reached_a_entry\n'}
+[1.502655] (-) TimerEvent: {}
+[1.602845] (-) TimerEvent: {}
+[1.703086] (-) TimerEvent: {}
+[1.803326] (-) TimerEvent: {}
+[1.903563] (-) TimerEvent: {}
+[2.003791] (-) TimerEvent: {}
+[2.104032] (-) TimerEvent: {}
+[2.204271] (-) TimerEvent: {}
+[2.304559] (-) TimerEvent: {}
+[2.404815] (-) TimerEvent: {}
+[2.505063] (-) TimerEvent: {}
+[2.605321] (-) TimerEvent: {}
+[2.705582] (-) TimerEvent: {}
+[2.805796] (-) TimerEvent: {}
+[2.906023] (-) TimerEvent: {}
+[3.006239] (-) TimerEvent: {}
+[3.106459] (-) TimerEvent: {}
+[3.206722] (-) TimerEvent: {}
+[3.306972] (-) TimerEvent: {}
+[3.407189] (-) TimerEvent: {}
+[3.507378] (-) TimerEvent: {}
+[3.607590] (-) TimerEvent: {}
+[3.707806] (-) TimerEvent: {}
+[3.808046] (-) TimerEvent: {}
+[3.908293] (-) TimerEvent: {}
+[4.008554] (-) TimerEvent: {}
+[4.108800] (-) TimerEvent: {}
+[4.209030] (-) TimerEvent: {}
+[4.309255] (-) TimerEvent: {}
+[4.409514] (-) TimerEvent: {}
+[4.509763] (-) TimerEvent: {}
+[4.610008] (-) TimerEvent: {}
+[4.710251] (-) TimerEvent: {}
+[4.810487] (-) TimerEvent: {}
+[4.910995] (-) TimerEvent: {}
+[4.916454] (amr_topology) StderrLine: {'line': b'gmake[2]: *** [CMakeFiles/rc_car_follower_node.dir/build.make:76: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o] Error 1\n'}
+[4.916758] (amr_topology) StderrLine: {'line': b'gmake[1]: *** [CMakeFiles/Makefile2:225: CMakeFiles/rc_car_follower_node.dir/all] Error 2\n'}
+[4.916860] (amr_topology) StderrLine: {'line': b'gmake: *** [Makefile:146: all] Error 2\n'}
+[4.918681] (amr_topology) CommandEnded: {'returncode': 2}
+[4.925097] (amr_topology) JobEnded: {'identifier': 'amr_topology', 'rc': 2}
+[4.935271] (-) EventReactorShutdown: {}

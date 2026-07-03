@@ -1,0 +1,7 @@
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘MissionLoop::MppiRescueStatus MissionLoop::update_mppi_rescue_status(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&, double, double, bool, bool)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:776:25: warning: unused parameter ‘pose’ [-Wunused-parameter]
+  776 |     const RobotPose2D & pose,
+      |     ~~~~~~~~~~~~~~~~~~~~^~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:777:25: warning: unused parameter ‘target’ [-Wunused-parameter]
+  777 |     const MissionNode & target,
+      |     ~~~~~~~~~~~~~~~~~~~~^~~~~~

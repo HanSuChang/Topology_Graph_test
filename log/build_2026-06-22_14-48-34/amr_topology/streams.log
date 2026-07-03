@@ -1,0 +1,104 @@
+[0.006s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.023s] -- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+[0.094s] -- Found ament_index_cpp: 1.4.1 (/opt/ros/humble/share/ament_index_cpp/cmake)
+[0.094s] -- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)
+[0.105s] -- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[0.106s] -- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[0.111s] -- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[0.116s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.121s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.135s] -- Found nav_msgs: 4.9.1 (/opt/ros/humble/share/nav_msgs/cmake)
+[0.147s] -- Found nav2_msgs: 1.1.20 (/opt/ros/humble/share/nav2_msgs/cmake)
+[0.164s] -- Found rclcpp: 16.0.19 (/opt/ros/humble/share/rclcpp/cmake)
+[0.177s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[0.178s] -- Found rmw_fastrtps_cpp: 6.2.10 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[0.235s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[0.255s] -- Found rclcpp_action: 16.0.19 (/opt/ros/humble/share/rclcpp_action/cmake)
+[0.260s] -- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)
+[0.266s] -- Found tf2_ros: 0.25.20 (/opt/ros/humble/share/tf2_ros/cmake)
+[0.336s] -- Configuring done
+[0.345s] -- Generating done
+[0.348s] -- Build files have been written to: /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology
+[0.371s] Consolidate compiler generated dependencies of target topology_follower
+[0.371s] Consolidate compiler generated dependencies of target rc_car_follower_node
+[0.371s] Consolidate compiler generated dependencies of target mission_loop
+[0.378s] [ 42%] Building CXX object CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o
+[0.378s] [ 42%] Built target topology_follower
+[0.378s] [ 57%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+[0.379s] [ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[0.505s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:22:10: fatal error: turtlebot3_msgs/msg/sound.hpp: No such file or directory
+[0.506s]    22 | #include <turtlebot3_msgs/msg/sound.hpp>
+[0.506s]       |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[0.506s] compilation terminated.
+[0.510s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[0.511s] gmake[2]: *** Waiting for unfinished jobs....
+[1.076s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[1.076s] gmake[1]: *** Waiting for unfinished jobs....
+[13.086s] [ 85%] Linking CXX executable rc_car_follower_node
+[13.577s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: warning: relocation against `_ZTVN4YAML13BadConversionE' in read-only section `.text._ZN4YAML13BadConversionC2ERKNS_4MarkE[_ZN4YAML13BadConversionC5ERKNS_4MarkE]'
+[13.619s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::Exception::Exception(YAML::Mark const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)':
+[13.619s] rc_car_follower_node.cpp:(.text._ZN4YAML9ExceptionC2ERKNS_4MarkERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE[_ZN4YAML9ExceptionC5ERKNS_4MarkERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE]+0x61): undefined reference to `vtable for YAML::Exception'
+[13.623s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::RepresentationException::RepresentationException(YAML::Mark const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)':
+[13.624s] rc_car_follower_node.cpp:(.text._ZN4YAML23RepresentationExceptionC2ERKNS_4MarkERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE[_ZN4YAML23RepresentationExceptionC5ERKNS_4MarkERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE]+0x32): undefined reference to `vtable for YAML::RepresentationException'
+[13.624s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::InvalidNode::InvalidNode(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)':
+[13.624s] rc_car_follower_node.cpp:(.text._ZN4YAML11InvalidNodeC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE[_ZN4YAML11InvalidNodeC5ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE]+0x71): undefined reference to `vtable for YAML::InvalidNode'
+[13.624s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::BadConversion::BadConversion(YAML::Mark const&)':
+[13.624s] rc_car_follower_node.cpp:(.text._ZN4YAML13BadConversionC2ERKNS_4MarkE[_ZN4YAML13BadConversionC5ERKNS_4MarkE]+0x7c): undefined reference to `vtable for YAML::BadConversion'
+[13.625s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::memory_holder::create_node()':
+[13.625s] rc_car_follower_node.cpp:(.text._ZN4YAML6detail13memory_holder11create_nodeEv[_ZN4YAML6detail13memory_holder11create_nodeEv]+0x20): undefined reference to `YAML::detail::memory::create_node()'
+[13.626s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node_ref::mark_defined()':
+[13.626s] rc_car_follower_node.cpp:(.text._ZN4YAML6detail8node_ref12mark_definedEv[_ZN4YAML6detail8node_ref12mark_definedEv]+0x20): undefined reference to `YAML::detail::node_data::mark_defined()'
+[13.627s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node_ref::set_null()':
+[13.627s] rc_car_follower_node.cpp:(.text._ZN4YAML6detail8node_ref8set_nullEv[_ZN4YAML6detail8node_ref8set_nullEv]+0x20): undefined reference to `YAML::detail::node_data::set_null()'
+[13.627s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node_ref::begin()':
+[13.627s] rc_car_follower_node.cpp:(.text._ZN4YAML6detail8node_ref5beginEv[_ZN4YAML6detail8node_ref5beginEv]+0x3d): undefined reference to `YAML::detail::node_data::begin()'
+[13.627s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node_ref::end()':
+[13.627s] rc_car_follower_node.cpp:(.text._ZN4YAML6detail8node_ref3endEv[_ZN4YAML6detail8node_ref3endEv]+0x3d): undefined reference to `YAML::detail::node_data::end()'
+[13.628s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::Node::EnsureNodeExists() const':
+[13.628s] rc_car_follower_node.cpp:(.text._ZNK4YAML4Node16EnsureNodeExistsEv[_ZNK4YAML4Node16EnsureNodeExistsEv]+0x44): undefined reference to `YAML::InvalidNode::~InvalidNode()'
+[13.628s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node16EnsureNodeExistsEv[_ZNK4YAML4Node16EnsureNodeExistsEv]+0x4e): undefined reference to `typeinfo for YAML::InvalidNode'
+[13.628s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::Node::Mark() const':
+[13.628s] rc_car_follower_node.cpp:(.text._ZNK4YAML4Node4MarkEv[_ZNK4YAML4Node4MarkEv]+0x44): undefined reference to `YAML::InvalidNode::~InvalidNode()'
+[13.629s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node4MarkEv[_ZNK4YAML4Node4MarkEv]+0x4e): undefined reference to `typeinfo for YAML::InvalidNode'
+[13.629s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::Node::Type() const':
+[13.629s] rc_car_follower_node.cpp:(.text._ZNK4YAML4Node4TypeEv[_ZNK4YAML4Node4TypeEv]+0x44): undefined reference to `YAML::InvalidNode::~InvalidNode()'
+[13.629s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node4TypeEv[_ZNK4YAML4Node4TypeEv]+0x4e): undefined reference to `typeinfo for YAML::InvalidNode'
+[13.630s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::Node::Scalar[abi:cxx11]() const':
+[13.630s] rc_car_follower_node.cpp:(.text._ZNK4YAML4Node6ScalarB5cxx11Ev[_ZNK4YAML4Node6ScalarB5cxx11Ev]+0x44): undefined reference to `YAML::InvalidNode::~InvalidNode()'
+[13.630s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node6ScalarB5cxx11Ev[_ZNK4YAML4Node6ScalarB5cxx11Ev]+0x4e): undefined reference to `typeinfo for YAML::InvalidNode'
+[13.631s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node6ScalarB5cxx11Ev[_ZNK4YAML4Node6ScalarB5cxx11Ev]+0x7d): undefined reference to `YAML::detail::node_data::empty_scalar[abi:cxx11]()'
+[13.631s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `RcCarFollowerNode::load_topology_nodes()':
+[13.631s] rc_car_follower_node.cpp:(.text._ZN17RcCarFollowerNode19load_topology_nodesEv[_ZN17RcCarFollowerNode19load_topology_nodesEv]+0x59): undefined reference to `YAML::LoadFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)'
+[13.632s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > YAML::Node::as<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >() const':
+[13.632s] rc_car_follower_node.cpp:(.text._ZNK4YAML4Node2asINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEET_v[_ZNK4YAML4Node2asINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEET_v]+0x57): undefined reference to `YAML::InvalidNode::~InvalidNode()'
+[13.632s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node2asINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEET_v[_ZNK4YAML4Node2asINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEET_v]+0x61): undefined reference to `typeinfo for YAML::InvalidNode'
+[13.633s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `double YAML::Node::as<double>() const':
+[13.633s] rc_car_follower_node.cpp:(.text._ZNK4YAML4Node2asIdEET_v[_ZNK4YAML4Node2asIdEET_v]+0x53): undefined reference to `YAML::InvalidNode::~InvalidNode()'
+[13.633s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML4Node2asIdEET_v[_ZNK4YAML4Node2asIdEET_v]+0x5d): undefined reference to `typeinfo for YAML::InvalidNode'
+[13.634s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::TypedBadConversion<double>::~TypedBadConversion()':
+[13.634s] rc_car_follower_node.cpp:(.text._ZN4YAML18TypedBadConversionIdED2Ev[_ZN4YAML18TypedBadConversionIdED5Ev]+0x26): undefined reference to `YAML::BadConversion::~BadConversion()'
+[13.635s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node* YAML::detail::node_data::get<char [6]>(char const (&) [6], std::shared_ptr<YAML::detail::memory_holder>) const':
+[13.635s] rc_car_follower_node.cpp:(.text._ZNK4YAML6detail9node_data3getIA6_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE[_ZNK4YAML6detail9node_data3getIA6_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE]+0xf7): undefined reference to `YAML::BadSubscript::~BadSubscript()'
+[13.636s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML6detail9node_data3getIA6_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE[_ZNK4YAML6detail9node_data3getIA6_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE]+0x101): undefined reference to `typeinfo for YAML::BadSubscript'
+[13.637s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node* YAML::detail::node_data::get<char [2]>(char const (&) [2], std::shared_ptr<YAML::detail::memory_holder>) const':
+[13.637s] rc_car_follower_node.cpp:(.text._ZNK4YAML6detail9node_data3getIA2_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE[_ZNK4YAML6detail9node_data3getIA2_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE]+0xf7): undefined reference to `YAML::BadSubscript::~BadSubscript()'
+[13.639s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML6detail9node_data3getIA2_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE[_ZNK4YAML6detail9node_data3getIA2_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE]+0x101): undefined reference to `typeinfo for YAML::BadSubscript'
+[13.641s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::detail::node* YAML::detail::node_data::get<char [4]>(char const (&) [4], std::shared_ptr<YAML::detail::memory_holder>) const':
+[13.641s] rc_car_follower_node.cpp:(.text._ZNK4YAML6detail9node_data3getIA4_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE[_ZNK4YAML6detail9node_data3getIA4_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE]+0xf7): undefined reference to `YAML::BadSubscript::~BadSubscript()'
+[13.642s] /usr/bin/ld: rc_car_follower_node.cpp:(.text._ZNK4YAML6detail9node_data3getIA4_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE[_ZNK4YAML6detail9node_data3getIA4_cEEPNS0_4nodeERKT_St10shared_ptrINS0_13memory_holderEE]+0x101): undefined reference to `typeinfo for YAML::BadSubscript'
+[13.643s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::BadSubscript::BadSubscript<char [6]>(YAML::Mark const&, char const (&) [6])':
+[13.643s] rc_car_follower_node.cpp:(.text._ZN4YAML12BadSubscriptC2IA6_cEERKNS_4MarkERKT_[_ZN4YAML12BadSubscriptC5IA6_cEERKNS_4MarkERKT_]+0x61): undefined reference to `vtable for YAML::BadSubscript'
+[13.643s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::BadSubscript::BadSubscript<char [2]>(YAML::Mark const&, char const (&) [2])':
+[13.643s] rc_car_follower_node.cpp:(.text._ZN4YAML12BadSubscriptC2IA2_cEERKNS_4MarkERKT_[_ZN4YAML12BadSubscriptC5IA2_cEERKNS_4MarkERKT_]+0x61): undefined reference to `vtable for YAML::BadSubscript'
+[13.644s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::BadSubscript::BadSubscript<char [4]>(YAML::Mark const&, char const (&) [4])':
+[13.644s] rc_car_follower_node.cpp:(.text._ZN4YAML12BadSubscriptC2IA4_cEERKNS_4MarkERKT_[_ZN4YAML12BadSubscriptC5IA4_cEERKNS_4MarkERKT_]+0x61): undefined reference to `vtable for YAML::BadSubscript'
+[13.655s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o: in function `YAML::TypedBadConversion<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >::~TypedBadConversion()':
+[13.655s] rc_car_follower_node.cpp:(.text._ZN4YAML18TypedBadConversionINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEED2Ev[_ZN4YAML18TypedBadConversionINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEED5Ev]+0x26): undefined reference to `YAML::BadConversion::~BadConversion()'
+[13.656s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o:(.data.rel.ro._ZTIN4YAML18TypedBadConversionIdEE[_ZTIN4YAML18TypedBadConversionIdEE]+0x10): undefined reference to `typeinfo for YAML::BadConversion'
+[13.657s] /usr/bin/ld: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o:(.data.rel.ro._ZTIN4YAML18TypedBadConversionINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEE[_ZTIN4YAML18TypedBadConversionINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEE]+0x10): undefined reference to `typeinfo for YAML::BadConversion'
+[13.704s] /usr/bin/ld: warning: creating DT_TEXTREL in a PIE
+[13.715s] collect2: error: ld returned 1 exit status
+[13.716s] gmake[2]: *** [CMakeFiles/rc_car_follower_node.dir/build.make:175: rc_car_follower_node] Error 1
+[13.716s] gmake[1]: *** [CMakeFiles/Makefile2:193: CMakeFiles/rc_car_follower_node.dir/all] Error 2
+[13.717s] gmake: *** [Makefile:146: all] Error 2
+[13.718s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

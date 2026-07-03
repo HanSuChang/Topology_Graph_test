@@ -1,0 +1,30 @@
+Consolidate compiler generated dependencies of target mission_loop
+[ 28%] Built target topology_follower
+[ 57%] Built target rc_car_follower_node
+[ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:243:5: error: ‘slot_obstacle_watch_radius_’ was not declared in this scope
+  243 |     slot_obstacle_watch_radius_ =
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:245:5: error: ‘slot_obstacle_watch_max_distance_’ was not declared in this scope
+  245 |     slot_obstacle_watch_max_distance_ =
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::slot_node_has_obstacle_nearby(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&) const’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:732:25: error: ‘slot_obstacle_watch_max_distance_’ was not declared in this scope
+  732 |     if (node_distance > slot_obstacle_watch_max_distance_) {
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:749:51: error: ‘slot_obstacle_watch_radius_’ was not declared in this scope
+  749 |       if (std::hypot(wx - node.x, wy - node.y) <= slot_obstacle_watch_radius_) {
+      |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::static_map_cell_is_occupied(double, double) const’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:760:8: error: ‘last_map_’ was not declared in this scope; did you mean ‘last_scan_’?
+  760 |       !last_map_.has_value() ||
+      |        ^~~~~~~~~
+      |        last_scan_
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:768:24: error: ‘last_map_’ was not declared in this scope; did you mean ‘last_scan_’?
+  768 |     const auto & map = last_map_.value();
+      |                        ^~~~~~~~~
+      |                        last_scan_
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

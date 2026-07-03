@@ -6,10 +6,12 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <memory>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <termios.h>
+#include <utility>
 #include <unistd.h>
 #include <vector>
 
@@ -208,9 +210,11 @@ enum class FollowerMode
 {
   Stop,
   Follow,
-  Return,
   Align,
-  TurnPrepareLeft
+  TurnPrepareLeft,
+  TurnCcw90,
+  TurnCw90,
+  DriveToPostArucoTarget
 };
 
 }  // namespace
@@ -228,6 +232,7 @@ public:
     this->declare_parameter<std::string>("command_topic", "/rc_car/command");
     this->declare_parameter<std::string>("encoder_ticks_topic", "/rc_car/encoder_ticks");
     this->declare_parameter<std::string>("serial_debug_topic", "/rc_car/serial_debug");
+    this->declare_parameter<std::string>("slot_wait_status_topic", "/rc_car/slot_wait_status");
     this->declare_parameter<std::string>("arduino_port", "auto");
     this->declare_parameter<int>("arduino_baud_rate", 115200);
     this->declare_parameter<double>("target_distance", 0.70);
@@ -254,6 +259,8 @@ public:
     this->declare_parameter<double>("right_meters_per_tick", -0.012);
     this->declare_parameter<bool>("enable_command_odom_fallback", true);
     this->declare_parameter<double>("encoder_timeout_seconds", 0.50);
+    this->declare_parameter<double>("encoder_startup_settle_seconds", 1.0);
+    this->declare_parameter<bool>("require_encoder_baseline", true);
     this->declare_parameter<double>("max_pwm_wheel_speed", 0.24);
     this->declare_parameter<double>("odom_publish_rate_hz", 20.0);
     this->declare_parameter<double>("leader_turn_assist_heading", 0.35);
@@ -289,6 +296,23 @@ public:
     this->declare_parameter<double>("intersection_1_turn_radius", 0.35);
     this->declare_parameter<double>("intersection_1_turn_seconds", 1.20);
     this->declare_parameter<std::string>("intersection_1_left_turn_command", "3");
+    this->declare_parameter<bool>("enable_intersection_1_turn_assist", true);
+    this->declare_parameter<double>("intersection_1_turn_assist_radius", 0.45);
+    this->declare_parameter<double>("intersection_1_turn_assist_yaw_tolerance", 0.25);
+    this->declare_parameter<double>("intersection_1_turn_assist_max_progress", 0.45);
+    this->declare_parameter<double>("intersection_1_turn_assist_lateral_tolerance", 0.35);
+    this->declare_parameter<double>("a_entry_x", 1.2001334428787231);
+    this->declare_parameter<double>("a_entry_y", -0.001835942268371582);
+    this->declare_parameter<double>("staged_yaw_tolerance", 0.12);
+    this->declare_parameter<int>("staged_turn_pwm", 70);
+    this->declare_parameter<double>("turn_ccw_90_degrees", 100.0);
+    this->declare_parameter<double>("turn_cw_90_degrees", 140.0);
+    this->declare_parameter<double>("turn_ccw_90_yaw_tolerance", 0.08);
+    this->declare_parameter<int>("turn_ccw_90_pwm", 70);
+    this->declare_parameter<double>("post_aruco_target_x", 2.000904083251953);
+    this->declare_parameter<double>("post_aruco_target_y", -0.001956900581717491);
+    this->declare_parameter<double>("post_aruco_target_tolerance", 0.08);
+    this->declare_parameter<int>("post_aruco_target_pwm", 85);
 
     target_distance_ = this->get_parameter("target_distance").as_double();
     distance_deadband_ = this->get_parameter("distance_deadband").as_double();
@@ -319,6 +343,9 @@ public:
       this->get_parameter("enable_command_odom_fallback").as_bool();
     encoder_timeout_seconds_ = std::max(
       0.0, this->get_parameter("encoder_timeout_seconds").as_double());
+    encoder_startup_settle_seconds_ = std::max(
+      0.0, this->get_parameter("encoder_startup_settle_seconds").as_double());
+    require_encoder_baseline_ = this->get_parameter("require_encoder_baseline").as_bool();
     max_pwm_wheel_speed_ = std::max(
       0.01, this->get_parameter("max_pwm_wheel_speed").as_double());
     leader_turn_assist_heading_ = this->get_parameter("leader_turn_assist_heading").as_double();
@@ -381,6 +408,36 @@ public:
       this->get_parameter("intersection_1_turn_seconds").as_double();
     intersection_1_left_turn_command_ =
       this->get_parameter("intersection_1_left_turn_command").as_string();
+    enable_intersection_1_turn_assist_ =
+      this->get_parameter("enable_intersection_1_turn_assist").as_bool();
+    intersection_1_turn_assist_radius_ = std::max(
+      0.01, this->get_parameter("intersection_1_turn_assist_radius").as_double());
+    intersection_1_turn_assist_yaw_tolerance_ = std::max(
+      0.01, this->get_parameter("intersection_1_turn_assist_yaw_tolerance").as_double());
+    intersection_1_turn_assist_max_progress_ =
+      this->get_parameter("intersection_1_turn_assist_max_progress").as_double();
+    intersection_1_turn_assist_lateral_tolerance_ = std::max(
+      0.01, this->get_parameter("intersection_1_turn_assist_lateral_tolerance").as_double());
+    a_entry_x_ = this->get_parameter("a_entry_x").as_double();
+    a_entry_y_ = this->get_parameter("a_entry_y").as_double();
+    staged_yaw_tolerance_ = std::max(
+      0.01, this->get_parameter("staged_yaw_tolerance").as_double());
+    staged_turn_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("staged_turn_pwm").as_int()), 0, 255);
+    turn_ccw_90_radians_ =
+      this->get_parameter("turn_ccw_90_degrees").as_double() * M_PI / 180.0;
+    turn_cw_90_radians_ =
+      this->get_parameter("turn_cw_90_degrees").as_double() * M_PI / 180.0;
+    turn_ccw_90_yaw_tolerance_ = std::max(
+      0.005, this->get_parameter("turn_ccw_90_yaw_tolerance").as_double());
+    turn_ccw_90_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("turn_ccw_90_pwm").as_int()), 0, 255);
+    post_aruco_target_x_ = this->get_parameter("post_aruco_target_x").as_double();
+    post_aruco_target_y_ = this->get_parameter("post_aruco_target_y").as_double();
+    post_aruco_target_tolerance_ = std::max(
+      0.02, this->get_parameter("post_aruco_target_tolerance").as_double());
+    post_aruco_target_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("post_aruco_target_pwm").as_int()), 0, 255);
     mode_ = this->get_parameter("start_in_follow_mode").as_bool() ?
       FollowerMode::Follow : FollowerMode::Stop;
 
@@ -444,6 +501,9 @@ public:
     encoder_ticks_pub_ =
       this->create_publisher<std_msgs::msg::Int64MultiArray>(encoder_ticks_topic, 10);
     serial_debug_pub_ = this->create_publisher<std_msgs::msg::String>(serial_debug_topic, 10);
+    slot_status_pub_ = this->create_publisher<std_msgs::msg::String>(
+      this->get_parameter("slot_wait_status_topic").as_string(),
+      10);
 
     try_open_serial_port();
 
@@ -499,6 +559,14 @@ private:
     last_command_.clear();
     last_sent_pwm_command_ = PwmCommand{0, 0};
     last_command_sent_at_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
+    serial_connected_at_ = this->now();
+    serial_rx_buffer_.clear();
+    last_left_ticks_.reset();
+    last_right_ticks_.reset();
+    last_encoder_stamp_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
+    last_encoder_motion_stamp_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
+    encoder_ready_ = false;
+    encoder_startup_settle_logged_ = false;
     RCLCPP_INFO(
       this->get_logger(),
       "Arduino serial connected: %s @ %d",
@@ -577,20 +645,75 @@ private:
     const FollowerMode previous_mode = mode_;
     if (mode == "follow") {
       mode_ = FollowerMode::Follow;
-      if (previous_mode != FollowerMode::Follow) {
+      turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      post_aruco_target_completed_ = false;
+      if (previous_mode != mode_) {
         follow_mode_started_at_ = this->now();
       }
-    } else if (mode == "return") {
-      mode_ = FollowerMode::Return;
-      clear_intersection_1_left_turn();
     } else if (mode == "align") {
       mode_ = FollowerMode::Align;
+      turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
     } else if (mode == "turn_prepare_left") {
       mode_ = FollowerMode::TurnPrepareLeft;
+      turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      post_aruco_target_completed_ = false;
+      clear_intersection_1_left_turn();
+    } else if (mode == "turn_ccw_90") {
+      if (turn_ccw_90_completed_) {
+        mode_ = FollowerMode::Stop;
+        turn_ccw_90_target_yaw_.reset();
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+      if (mode_ == FollowerMode::TurnCcw90 && turn_ccw_90_target_yaw_.has_value()) {
+        return;
+      }
+      if (follower_pose_.has_value()) {
+        turn_ccw_90_target_yaw_ =
+          normalize_angle(follower_pose_.value().yaw + std::abs(turn_ccw_90_radians_));
+      }
+      mode_ = FollowerMode::TurnCcw90;
+      publish_slot_status("turn_ccw_90_started");
+      clear_intersection_1_left_turn();
+    } else if (mode == "turn_cw_90") {
+      if (turn_cw_90_completed_) {
+        mode_ = FollowerMode::Stop;
+        turn_cw_90_target_yaw_.reset();
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+      if (mode_ == FollowerMode::TurnCw90 && turn_cw_90_target_yaw_.has_value()) {
+        return;
+      }
+      if (follower_pose_.has_value()) {
+        turn_cw_90_target_yaw_ =
+          normalize_angle(follower_pose_.value().yaw - std::abs(turn_cw_90_radians_));
+      }
+      mode_ = FollowerMode::TurnCw90;
+      publish_slot_status("turn_cw_90_started");
+      clear_intersection_1_left_turn();
+    } else if (mode == "drive_to_post_aruco_target") {
+      if (post_aruco_target_completed_) {
+        mode_ = FollowerMode::Stop;
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+      if (mode_ == FollowerMode::DriveToPostArucoTarget) {
+        return;
+      }
+      mode_ = FollowerMode::DriveToPostArucoTarget;
+      publish_slot_status("post_aruco_target_started");
       clear_intersection_1_left_turn();
     } else {
       mode_ = FollowerMode::Stop;
+      turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
       send_pwm_command(PwmCommand{0, 0});
     }
@@ -607,7 +730,21 @@ private:
       return;
     }
 
-    if (!poses_are_fresh()) {
+    if (
+      mode_ == FollowerMode::TurnCcw90 ||
+      mode_ == FollowerMode::TurnCw90 ||
+      mode_ == FollowerMode::DriveToPostArucoTarget)
+    {
+      if (!follower_pose_is_fresh()) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(),
+          *this->get_clock(),
+          1000,
+          "Waiting for fresh follower pose");
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+    } else if (!poses_are_fresh()) {
       RCLCPP_WARN_THROTTLE(
         this->get_logger(),
         *this->get_clock(),
@@ -627,8 +764,52 @@ private:
       return;
     }
 
-    const Pose2D leader = leader_pose_.value();
     const Pose2D follower = follower_pose_.value();
+
+    if (mode_ == FollowerMode::TurnCcw90 && !turn_ccw_90_target_yaw_.has_value()) {
+      turn_ccw_90_target_yaw_ = normalize_angle(follower.yaw + std::abs(turn_ccw_90_radians_));
+    }
+    if (mode_ == FollowerMode::TurnCw90 && !turn_cw_90_target_yaw_.has_value()) {
+      turn_cw_90_target_yaw_ = normalize_angle(follower.yaw - std::abs(turn_cw_90_radians_));
+    }
+
+    if (
+      publish_encoder_odom_ &&
+      require_encoder_baseline_ &&
+      !encoder_ready_)
+    {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(),
+        *this->get_clock(),
+        1000,
+        "Waiting for encoder baseline before driving");
+      send_pwm_command(PwmCommand{0, 0});
+      return;
+    }
+
+    if (mode_ == FollowerMode::TurnCcw90) {
+      const PwmCommand command = make_turn_ccw_90_command(follower);
+      send_pwm_command(command);
+      return;
+    }
+    if (mode_ == FollowerMode::TurnCw90) {
+      const PwmCommand command = make_turn_cw_90_command(follower);
+      send_pwm_command(command);
+      return;
+    }
+    if (mode_ == FollowerMode::DriveToPostArucoTarget) {
+      const PwmCommand command = make_drive_to_post_aruco_target_command(follower);
+      send_pwm_command(apply_drive_duty(command));
+      return;
+    }
+
+    if (mode_ == FollowerMode::Follow && should_assist_intersection_1_turn(follower)) {
+      const PwmCommand command = make_intersection_1_turn_assist_command(follower);
+      send_pwm_command(apply_drive_duty(command));
+      return;
+    }
+
+    const Pose2D leader = leader_pose_.value();
     const Pose2D follow_target = select_leader_path_target();
     const double dx = follow_target.x - follower.x;
     const double dy = follow_target.y - follower.y;
@@ -641,13 +822,6 @@ private:
     PwmCommand command;
     if (mode_ == FollowerMode::Align) {
       command = make_align_command(heading_error);
-    } else if (mode_ == FollowerMode::Return) {
-      const double return_dx = leader.x - follower.x;
-      const double return_dy = leader.y - follower.y;
-      const double return_distance = std::hypot(return_dx, return_dy);
-      const double return_heading_error =
-        normalize_angle(std::atan2(return_dy, return_dx) - follower.yaw);
-      command = make_return_command(return_distance, return_heading_error);
     } else if (mode_ == FollowerMode::TurnPrepareLeft) {
       command = make_path_follow_command(
         distance, leader_distance, heading_error, target_yaw_error);
@@ -763,6 +937,21 @@ private:
       const std::string line = serial_rx_buffer_.substr(0, newline_pos);
       serial_rx_buffer_.erase(0, newline_pos + 1);
       publish_serial_debug_line(line);
+
+      if (
+        serial_connected_at_.nanoseconds() > 0 &&
+        (this->now() - serial_connected_at_).seconds() < encoder_startup_settle_seconds_)
+      {
+        if (!encoder_startup_settle_logged_) {
+          encoder_startup_settle_logged_ = true;
+          RCLCPP_INFO(
+            this->get_logger(),
+            "Ignoring encoder startup serial for %.2f seconds",
+            encoder_startup_settle_seconds_);
+        }
+        continue;
+      }
+
       long left_ticks = 0;
       long right_ticks = 0;
       if (parse_tick_line(line, left_ticks, right_ticks)) {
@@ -794,6 +983,14 @@ private:
     std_msgs::msg::String msg;
     msg.data = line;
     serial_debug_pub_->publish(msg);
+  }
+
+  void publish_slot_status(const std::string & status)
+  {
+    std_msgs::msg::String msg;
+    msg.data = status;
+    slot_status_pub_->publish(msg);
+    RCLCPP_INFO(this->get_logger(), "RC car slot status: %s", status.c_str());
   }
 
   bool parse_tick_line(const std::string & line, long & left_ticks, long & right_ticks) const
@@ -885,6 +1082,15 @@ private:
       last_right_ticks_ = right_ticks;
       last_encoder_stamp_ = this->now();
       last_odom_integrated_stamp_ = last_encoder_stamp_;
+      encoder_ready_ = true;
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Encoder baseline set: L=%ld R=%ld; RC odom ready at x=%.3f y=%.3f yaw=%.3f",
+        left_ticks,
+        right_ticks,
+        odom_pose_.x,
+        odom_pose_.y,
+        odom_pose_.yaw);
       return;
     }
 
@@ -948,6 +1154,9 @@ private:
   void update_command_odom_fallback()
   {
     if (!enable_command_odom_fallback_) {
+      return;
+    }
+    if (publish_encoder_odom_ && require_encoder_baseline_ && !encoder_ready_) {
       return;
     }
 
@@ -1042,6 +1251,17 @@ private:
     return leader_age <= pose_timeout_seconds_ && follower_age <= pose_timeout_seconds_;
   }
 
+  bool follower_pose_is_fresh() const
+  {
+    if (!follower_pose_.has_value()) {
+      return false;
+    }
+
+    const rclcpp::Time now = this->now();
+    const double follower_age = (now - last_follower_stamp_).seconds();
+    return follower_age <= pose_timeout_seconds_;
+  }
+
   PwmCommand make_follow_command(
     double distance,
     double heading_error,
@@ -1103,12 +1323,169 @@ private:
     return apply_turn_to_pwm(calculate_forward_pwm(leader_distance - target_distance_), turn_error);
   }
 
-  PwmCommand make_return_command(double distance, double heading_error) const
+  bool progress_from_intersection_1_to_a_entry(
+    const Pose2D & follower,
+    double & progress,
+    double & lateral_error) const
   {
-    if (distance <= target_distance_) {
+    const double sx = a_entry_x_ - intersection_1_x_;
+    const double sy = a_entry_y_ - intersection_1_y_;
+    const double segment_length = std::hypot(sx, sy);
+    if (segment_length <= 1e-6) {
+      progress = 0.0;
+      lateral_error = std::numeric_limits<double>::infinity();
+      return false;
+    }
+
+    const double fx = follower.x - intersection_1_x_;
+    const double fy = follower.y - intersection_1_y_;
+    progress = (fx * sx + fy * sy) / (segment_length * segment_length);
+    lateral_error = std::abs(fx * sy - fy * sx) / segment_length;
+    return true;
+  }
+
+  double intersection_1_to_a_entry_yaw() const
+  {
+    return std::atan2(a_entry_y_ - intersection_1_y_, a_entry_x_ - intersection_1_x_);
+  }
+
+  bool should_assist_intersection_1_turn(const Pose2D & follower) const
+  {
+    if (!enable_intersection_1_turn_assist_) {
+      return false;
+    }
+
+    double progress = 0.0;
+    double lateral_error = 0.0;
+    if (!progress_from_intersection_1_to_a_entry(follower, progress, lateral_error)) {
+      return false;
+    }
+    if (progress > intersection_1_turn_assist_max_progress_ ||
+      lateral_error > intersection_1_turn_assist_lateral_tolerance_)
+    {
+      return false;
+    }
+
+    const double distance_from_intersection =
+      distance_to_target(follower, intersection_1_x_, intersection_1_y_);
+    if (distance_from_intersection > intersection_1_turn_assist_radius_) {
+      return false;
+    }
+
+    const double heading_error =
+      normalize_angle(intersection_1_to_a_entry_yaw() - follower.yaw);
+    return std::abs(heading_error) > intersection_1_turn_assist_yaw_tolerance_;
+  }
+
+  PwmCommand make_intersection_1_turn_assist_command(const Pose2D & follower)
+  {
+    const double target_yaw = intersection_1_to_a_entry_yaw();
+    const double heading_error = normalize_angle(target_yaw - follower.yaw);
+    double progress = 0.0;
+    double lateral_error = 0.0;
+    (void)progress_from_intersection_1_to_a_entry(follower, progress, lateral_error);
+
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Assisting intersection_1 turn: yaw_error=%.2f progress=%.2f lateral=%.3f",
+      heading_error,
+      progress,
+      lateral_error);
+    return make_staged_turn_command(heading_error);
+  }
+
+  double distance_to_target(const Pose2D & follower, double target_x, double target_y) const
+  {
+    return std::hypot(target_x - follower.x, target_y - follower.y);
+  }
+
+  PwmCommand make_staged_turn_command(double heading_error) const
+  {
+    if (std::abs(heading_error) <= staged_yaw_tolerance_) {
       return PwmCommand{0, 0};
     }
-    return apply_turn_to_pwm(calculate_forward_pwm(distance - target_distance_), heading_error);
+    if (heading_error > 0.0) {
+      return PwmCommand{-staged_turn_pwm_, staged_turn_pwm_};
+    }
+    return PwmCommand{staged_turn_pwm_, -staged_turn_pwm_};
+  }
+
+  PwmCommand make_turn_ccw_90_command(const Pose2D & follower)
+  {
+    if (!turn_ccw_90_target_yaw_.has_value()) {
+      return PwmCommand{0, 0};
+    }
+
+    const double heading_error =
+      normalize_angle(turn_ccw_90_target_yaw_.value() - follower.yaw);
+    if (std::abs(heading_error) <= turn_ccw_90_yaw_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      turn_ccw_90_target_yaw_.reset();
+      turn_ccw_90_completed_ = true;
+      publish_slot_status("turn_ccw_90_done");
+      return PwmCommand{0, 0};
+    }
+
+    if (heading_error > 0.0) {
+      return PwmCommand{-turn_ccw_90_pwm_, turn_ccw_90_pwm_};
+    }
+    return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
+  }
+
+  PwmCommand make_turn_cw_90_command(const Pose2D & follower)
+  {
+    if (!turn_cw_90_target_yaw_.has_value()) {
+      return PwmCommand{0, 0};
+    }
+
+    const double heading_error =
+      normalize_angle(turn_cw_90_target_yaw_.value() - follower.yaw);
+    if (std::abs(heading_error) <= turn_ccw_90_yaw_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      turn_cw_90_target_yaw_.reset();
+      turn_cw_90_completed_ = true;
+      publish_slot_status("turn_cw_90_done");
+      return PwmCommand{0, 0};
+    }
+
+    if (heading_error > 0.0) {
+      return PwmCommand{-turn_ccw_90_pwm_, turn_ccw_90_pwm_};
+    }
+    return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
+  }
+
+  PwmCommand make_drive_to_post_aruco_target_command(const Pose2D & follower)
+  {
+    const double dx = post_aruco_target_x_ - follower.x;
+    const double dy = post_aruco_target_y_ - follower.y;
+    const double distance = std::hypot(dx, dy);
+    if (distance <= post_aruco_target_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      post_aruco_target_completed_ = true;
+      publish_slot_status("post_aruco_target_arrived");
+      return PwmCommand{0, 0};
+    }
+
+    const double target_heading = std::atan2(dy, dx);
+    const double heading_error = normalize_angle(target_heading - follower.yaw);
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Driving RC car to post ArUco target: distance=%.3f heading_error=%.2f",
+      distance,
+      heading_error);
+
+    if (std::abs(heading_error) > 0.55) {
+      return make_staged_turn_command(heading_error);
+    }
+
+    const int forward_pwm = distance < 0.25 ?
+      std::min(post_aruco_target_pwm_, slow_forward_pwm_) :
+      post_aruco_target_pwm_;
+    return apply_turn_to_pwm(forward_pwm, heading_error, near_turn_pwm_delta_);
   }
 
   int calculate_forward_pwm(double distance_error) const
@@ -1311,6 +1688,8 @@ private:
   double right_meters_per_tick_{-0.012};
   bool enable_command_odom_fallback_{true};
   double encoder_timeout_seconds_{0.50};
+  double encoder_startup_settle_seconds_{1.0};
+  bool require_encoder_baseline_{true};
   double max_pwm_wheel_speed_{0.24};
   double leader_turn_assist_heading_{0.35};
   double command_resend_period_seconds_{0.25};
@@ -1345,7 +1724,23 @@ private:
   double intersection_1_turn_radius_{0.35};
   double intersection_1_turn_seconds_{1.20};
   std::string intersection_1_left_turn_command_{"3"};
-
+  bool enable_intersection_1_turn_assist_{true};
+  double intersection_1_turn_assist_radius_{0.45};
+  double intersection_1_turn_assist_yaw_tolerance_{0.25};
+  double intersection_1_turn_assist_max_progress_{0.45};
+  double intersection_1_turn_assist_lateral_tolerance_{0.35};
+  double a_entry_x_{1.2001334428787231};
+  double a_entry_y_{-0.001835942268371582};
+  double staged_yaw_tolerance_{0.12};
+  int staged_turn_pwm_{70};
+  double turn_ccw_90_radians_{100.0 * M_PI / 180.0};
+  double turn_cw_90_radians_{140.0 * M_PI / 180.0};
+  double turn_ccw_90_yaw_tolerance_{0.08};
+  int turn_ccw_90_pwm_{70};
+  double post_aruco_target_x_{2.000904083251953};
+  double post_aruco_target_y_{-0.001956900581717491};
+  double post_aruco_target_tolerance_{0.08};
+  int post_aruco_target_pwm_{85};
   std::optional<Pose2D> leader_pose_;
   std::optional<Pose2D> follower_pose_;
   std::vector<LeaderPoseSample> leader_history_;
@@ -1362,12 +1757,20 @@ private:
   rclcpp::Time last_command_sent_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_encoder_stamp_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_encoder_motion_stamp_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time serial_connected_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_odom_integrated_stamp_{0, 0, RCL_ROS_TIME};
   rclcpp::Time intersection_1_left_turn_end_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time intersection_1_left_turn_requested_at_{0, 0, RCL_ROS_TIME};
   bool intersection_1_left_turn_pending_{false};
   bool intersection_1_left_turn_active_{false};
   bool intersection_1_left_turn_completed_{false};
+  bool turn_ccw_90_completed_{false};
+  bool turn_cw_90_completed_{false};
+  bool post_aruco_target_completed_{false};
+  bool encoder_ready_{false};
+  bool encoder_startup_settle_logged_{false};
+  std::optional<double> turn_ccw_90_target_yaw_;
+  std::optional<double> turn_cw_90_target_yaw_;
   PwmCommand last_sent_pwm_command_;
   double encoder_balance_trim_pwm_{0.0};
   std::string last_command_;
@@ -1377,6 +1780,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr command_pub_;
   rclcpp::Publisher<std_msgs::msg::Int64MultiArray>::SharedPtr encoder_ticks_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr serial_debug_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr slot_status_pub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr leader_cmd_vel_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr follower_odom_sub_;

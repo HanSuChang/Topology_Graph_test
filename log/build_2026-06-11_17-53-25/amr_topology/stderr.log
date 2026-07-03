@@ -1,0 +1,10 @@
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:263:21: error: ‘struct amr_topology::LocalPlannerOptions’ has no member named ‘backup_target_distance’
+  263 |     planner_options.backup_target_distance =
+      |                     ^~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:265:21: error: ‘struct amr_topology::LocalPlannerOptions’ has no member named ‘backup_speed’
+  265 |     planner_options.backup_speed =
+      |                     ^~~~~~~~~~~~
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

@@ -1,0 +1,6 @@
+[0.008s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology --target mission_loop -- -j16 -l16
+[0.053s] Consolidate compiler generated dependencies of target mission_loop
+[0.063s] [ 33%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[14.264s] [ 66%] Linking CXX executable mission_loop
+[15.009s] [100%] Built target mission_loop
+[15.018s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology --target mission_loop -- -j16 -l16

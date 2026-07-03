@@ -1,0 +1,13 @@
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In constructor ‘RcCarFollowerNode::RcCarFollowerNode()’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:234:25: error: ‘clamp’ was not declared in this scope; did you mean ‘std::clamp’?
+  234 |     drive_duty_cycle_ = clamp(
+      |                         ^~~~~
+      |                         std::clamp
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: ‘std::clamp’ declared here
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+gmake[2]: *** [CMakeFiles/rc_car_follower_node.dir/build.make:76: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:193: CMakeFiles/rc_car_follower_node.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

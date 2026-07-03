@@ -1,0 +1,12 @@
+[0.009s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.053s] [ 42%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[0.053s] [ 42%] Built target topology_follower
+[0.053s] [ 71%] Built target rc_car_follower_node
+[2.311s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+[2.311s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:248:5: error: ‘slot_obstacle_clear_confirm_seconds_’ was not declared in this scope
+[2.311s]   248 |     slot_obstacle_clear_confirm_seconds_ =
+[2.311s]       |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[7.259s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[7.259s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[7.259s] gmake: *** [Makefile:146: all] Error 2
+[7.261s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

@@ -1,0 +1,77 @@
+-- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+-- Found ament_index_cpp: 1.4.1 (/opt/ros/humble/share/ament_index_cpp/cmake)
+-- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)
+-- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found nav_msgs: 4.9.1 (/opt/ros/humble/share/nav_msgs/cmake)
+-- Found nav2_msgs: 1.1.20 (/opt/ros/humble/share/nav2_msgs/cmake)
+-- Found rclcpp: 16.0.19 (/opt/ros/humble/share/rclcpp/cmake)
+-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 6.2.10 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found rclcpp_action: 16.0.19 (/opt/ros/humble/share/rclcpp_action/cmake)
+-- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)
+-- Found tf2_ros: 0.25.20 (/opt/ros/humble/share/tf2_ros/cmake)
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology
+Consolidate compiler generated dependencies of target mission_loop
+Consolidate compiler generated dependencies of target topology_follower
+[ 20%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[ 40%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+[ 80%] Built target topology_follower
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:525:7: error: no match for ‘operator=’ (operand types are ‘rclcpp_action::Client<nav2_msgs::action::FollowPath>::GoalResponseCallback’ {aka ‘std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>’} and ‘MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>’)
+  525 |       };
+      |       ^
+In file included from /usr/include/c++/11/future:47,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:3:
+/usr/include/c++/11/bits/std_function.h:530:9: note: candidate: ‘template<class _Functor> std::function<_Res(_ArgTypes ...)>::_Requires<std::function<_Res(_ArgTypes ...)>::_Callable<_Functor>, std::function<_Res(_ArgTypes ...)>&> std::function<_Res(_ArgTypes ...)>::operator=(_Functor&&) [with _Functor = _Functor; _Res = void; _ArgTypes = {std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >}]’
+  530 |         operator=(_Functor&& __f)
+      |         ^~~~~~~~
+/usr/include/c++/11/bits/std_function.h:530:9: note:   template argument deduction/substitution failed:
+In file included from /usr/include/c++/11/ratio:39,
+                 from /usr/include/c++/11/chrono:39,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1:
+/usr/include/c++/11/type_traits: In substitution of ‘template<bool _Cond, class _Tp> using __enable_if_t = typename std::enable_if::type [with bool _Cond = false; _Tp = std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>&]’:
+/usr/include/c++/11/bits/std_function.h:353:8:   required by substitution of ‘template<class _Res, class ... _ArgTypes> template<class _Cond, class _Tp> using _Requires = std::__enable_if_t<_Cond::value, _Tp> [with _Cond = std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>::_Callable<MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>, MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>, std::__invoke_result<MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>&, std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > > >; _Tp = std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>&; _Res = void; _ArgTypes = {std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >}]’
+/usr/include/c++/11/bits/std_function.h:530:2:   required by substitution of ‘template<class _Functor> std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>::_Requires<std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>::_Callable<_Functor, typename std::enable_if<(! std::is_same<typename std::remove_cv<typename std::remove_reference<_Tp>::type>::type, std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)> >::value), std::decay<_Tp> >::type::type, std::__invoke_result<typename std::enable_if<(! std::is_same<typename std::remove_cv<typename std::remove_reference<_Tp>::type>::type, std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)> >::value), std::decay<_Tp> >::type::type&, std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > > >, std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>&> std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>::operator=<_Functor>(_Functor&&) [with _Functor = MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>]’
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:525:7:   required from here
+/usr/include/c++/11/type_traits:2205:11: error: no type named ‘type’ in ‘struct std::enable_if<false, std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>&>’
+ 2205 |     using __enable_if_t = typename enable_if<_Cond, _Tp>::type;
+      |           ^~~~~~~~~~~~~
+In file included from /usr/include/c++/11/future:47,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:3:
+/usr/include/c++/11/bits/std_function.h:540:9: note: candidate: ‘template<class _Functor> std::function<_Res(_ArgTypes ...)>& std::function<_Res(_ArgTypes ...)>::operator=(std::reference_wrapper<_Functor>) [with _Functor = _Functor; _Res = void; _ArgTypes = {std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >}]’
+  540 |         operator=(reference_wrapper<_Functor> __f) noexcept
+      |         ^~~~~~~~
+/usr/include/c++/11/bits/std_function.h:540:9: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:525:7: note:   ‘MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>’ is not derived from ‘std::reference_wrapper<_Tp>’
+  525 |       };
+      |       ^
+In file included from /usr/include/c++/11/future:47,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:3:
+/usr/include/c++/11/bits/std_function.h:469:7: note: candidate: ‘std::function<_Res(_ArgTypes ...)>& std::function<_Res(_ArgTypes ...)>::operator=(const std::function<_Res(_ArgTypes ...)>&) [with _Res = void; _ArgTypes = {std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >}]’
+  469 |       operator=(const function& __x)
+      |       ^~~~~~~~
+/usr/include/c++/11/bits/std_function.h:469:33: note:   no known conversion for argument 1 from ‘MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>’ to ‘const std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>&’
+  469 |       operator=(const function& __x)
+      |                 ~~~~~~~~~~~~~~~~^~~
+/usr/include/c++/11/bits/std_function.h:487:7: note: candidate: ‘std::function<_Res(_ArgTypes ...)>& std::function<_Res(_ArgTypes ...)>::operator=(std::function<_Res(_ArgTypes ...)>&&) [with _Res = void; _ArgTypes = {std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >}]’
+  487 |       operator=(function&& __x) noexcept
+      |       ^~~~~~~~
+/usr/include/c++/11/bits/std_function.h:487:28: note:   no known conversion for argument 1 from ‘MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>’ to ‘std::function<void(std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >)>&&’
+  487 |       operator=(function&& __x) noexcept
+      |                 ~~~~~~~~~~~^~~
+/usr/include/c++/11/bits/std_function.h:501:7: note: candidate: ‘std::function<_Res(_ArgTypes ...)>& std::function<_Res(_ArgTypes ...)>::operator=(std::nullptr_t) [with _Res = void; _ArgTypes = {std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> >}; std::nullptr_t = std::nullptr_t]’
+  501 |       operator=(nullptr_t) noexcept
+      |       ^~~~~~~~
+/usr/include/c++/11/bits/std_function.h:501:17: note:   no known conversion for argument 1 from ‘MissionLoop::start_mppi_rescue(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&, const string&)::<lambda(std::shared_future<std::shared_ptr<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowPath> > >)>’ to ‘std::nullptr_t’
+  501 |       operator=(nullptr_t) noexcept
+      |                 ^~~~~~~~~
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:165: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

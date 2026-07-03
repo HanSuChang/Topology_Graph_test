@@ -1,0 +1,342 @@
+[0.000000] (-) TimerEvent: {}
+[0.000128] (amr_topology) JobQueued: {'identifier': 'amr_topology', 'dependencies': OrderedDict()}
+[0.000147] (amr_topology) JobStarted: {'identifier': 'amr_topology'}
+[0.004288] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'cmake'}
+[0.004835] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'build'}
+[0.005165] (amr_topology) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', '--', '-j16', '-l16'], 'cwd': '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('CODEX_CI', '1'), ('USER', 'lee'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/lee'), ('DESKTOP_SESSION', 'ubuntu'), ('NVM_BIN', '/home/lee/.nvm/versions/node/v24.15.0/bin'), ('NVM_INC', '/home/lee/.nvm/versions/node/v24.15.0/include/node'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('PAGER', 'cat'), ('LC_CTYPE', 'C.UTF-8'), ('SYSTEMD_EXEC_PID', '2154'), ('NO_COLOR', '1'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', ''), ('NVM_DIR', '/home/lee/.nvm'), ('COLCON_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install:/home/lee/smart_car_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'lee'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'lee'), ('TERM', 'dumb'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/lee/.local/bin:/home/lee/.codex/tmp/arg0/codex-arg09v3IuF:/home/lee/.nvm/versions/node/v24.15.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/path:/home/lee/.nvm/versions/node/v24.15.0/bin:/opt/ros/humble/bin:/home/lee/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/lee-OMEN-Gaming-Laptop-16-ap0xxx:@/tmp/.ICE-unix/1953,unix/lee-OMEN-Gaming-Laptop-16-ap0xxx:/tmp/.ICE-unix/1953'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/45fb9cf8_7880_4455_b7e4_9ad6b53bdab8'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('CODEX_SANDBOX_NETWORK_DISABLED', '1'), ('LANG', 'C.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('GH_PAGER', 'cat'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.102'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '27'), ('AMENT_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_py_pkg:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('CODEX_THREAD_ID', '019e80b3-8769-7bd2-9cf3-f141c6470288'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GIT_PAGER', 'cat'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology'), ('LC_ALL', 'C.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('NVM_CD_FLAGS', ''), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/lee/smart_car_ws/install/smart_car_py_pkg/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CODEX_MANAGED_BY_NPM', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble')]), 'shell': False}
+[0.031471] (amr_topology) StdoutLine: {'line': b'Consolidate compiler generated dependencies of target mission_loop\n'}
+[0.035095] (amr_topology) StdoutLine: {'line': b'[ 40%] Built target topology_follower\n'}
+[0.039516] (amr_topology) StdoutLine: {'line': b'[ 60%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o\n'}
+[0.099530] (-) TimerEvent: {}
+[0.199769] (-) TimerEvent: {}
+[0.299995] (-) TimerEvent: {}
+[0.400204] (-) TimerEvent: {}
+[0.500427] (-) TimerEvent: {}
+[0.600640] (-) TimerEvent: {}
+[0.700861] (-) TimerEvent: {}
+[0.801082] (-) TimerEvent: {}
+[0.901303] (-) TimerEvent: {}
+[1.001523] (-) TimerEvent: {}
+[1.101751] (-) TimerEvent: {}
+[1.201963] (-) TimerEvent: {}
+[1.302174] (-) TimerEvent: {}
+[1.402411] (-) TimerEvent: {}
+[1.502638] (-) TimerEvent: {}
+[1.602874] (-) TimerEvent: {}
+[1.703105] (-) TimerEvent: {}
+[1.803324] (-) TimerEvent: {}
+[1.903550] (-) TimerEvent: {}
+[2.003786] (-) TimerEvent: {}
+[2.104037] (-) TimerEvent: {}
+[2.204289] (-) TimerEvent: {}
+[2.304518] (-) TimerEvent: {}
+[2.404743] (-) TimerEvent: {}
+[2.504947] (-) TimerEvent: {}
+[2.605135] (-) TimerEvent: {}
+[2.705350] (-) TimerEvent: {}
+[2.805590] (-) TimerEvent: {}
+[2.906170] (-) TimerEvent: {}
+[3.006430] (-) TimerEvent: {}
+[3.106682] (-) TimerEvent: {}
+[3.206918] (-) TimerEvent: {}
+[3.307150] (-) TimerEvent: {}
+[3.407750] (-) TimerEvent: {}
+[3.507983] (-) TimerEvent: {}
+[3.608210] (-) TimerEvent: {}
+[3.708429] (-) TimerEvent: {}
+[3.808654] (-) TimerEvent: {}
+[3.908969] (-) TimerEvent: {}
+[4.009207] (-) TimerEvent: {}
+[4.109443] (-) TimerEvent: {}
+[4.209676] (-) TimerEvent: {}
+[4.309889] (-) TimerEvent: {}
+[4.410077] (-) TimerEvent: {}
+[4.510282] (-) TimerEvent: {}
+[4.610504] (-) TimerEvent: {}
+[4.710742] (-) TimerEvent: {}
+[4.810974] (-) TimerEvent: {}
+[4.911194] (-) TimerEvent: {}
+[5.011415] (-) TimerEvent: {}
+[5.111650] (-) TimerEvent: {}
+[5.212818] (-) TimerEvent: {}
+[5.313033] (-) TimerEvent: {}
+[5.413262] (-) TimerEvent: {}
+[5.513487] (-) TimerEvent: {}
+[5.613712] (-) TimerEvent: {}
+[5.713974] (-) TimerEvent: {}
+[5.814179] (-) TimerEvent: {}
+[5.914357] (-) TimerEvent: {}
+[6.014558] (-) TimerEvent: {}
+[6.114784] (-) TimerEvent: {}
+[6.215003] (-) TimerEvent: {}
+[6.315187] (-) TimerEvent: {}
+[6.415386] (-) TimerEvent: {}
+[6.516706] (-) TimerEvent: {}
+[6.616901] (-) TimerEvent: {}
+[6.717101] (-) TimerEvent: {}
+[6.817314] (-) TimerEvent: {}
+[6.917513] (-) TimerEvent: {}
+[7.017692] (-) TimerEvent: {}
+[7.117902] (-) TimerEvent: {}
+[7.218151] (-) TimerEvent: {}
+[7.318382] (-) TimerEvent: {}
+[7.418612] (-) TimerEvent: {}
+[7.518851] (-) TimerEvent: {}
+[7.579819] (amr_topology) StdoutLine: {'line': b'[ 80%] Linking CXX executable mission_loop\n'}
+[7.618979] (-) TimerEvent: {}
+[7.719210] (-) TimerEvent: {}
+[7.819427] (-) TimerEvent: {}
+[7.919641] (-) TimerEvent: {}
+[7.947201] (amr_topology) StdoutLine: {'line': b'[100%] Built target mission_loop\n'}
+[7.952680] (amr_topology) CommandEnded: {'returncode': 0}
+[7.953267] (amr_topology) JobProgress: {'identifier': 'amr_topology', 'progress': 'install'}
+[7.958537] (amr_topology) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology'], 'cwd': '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('CODEX_CI', '1'), ('USER', 'lee'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/lee'), ('DESKTOP_SESSION', 'ubuntu'), ('NVM_BIN', '/home/lee/.nvm/versions/node/v24.15.0/bin'), ('NVM_INC', '/home/lee/.nvm/versions/node/v24.15.0/include/node'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('PAGER', 'cat'), ('LC_CTYPE', 'C.UTF-8'), ('SYSTEMD_EXEC_PID', '2154'), ('NO_COLOR', '1'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', ''), ('NVM_DIR', '/home/lee/.nvm'), ('COLCON_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install:/home/lee/smart_car_ws/install'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'lee'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'lee'), ('TERM', 'dumb'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/home/lee/.local/bin:/home/lee/.codex/tmp/arg0/codex-arg09v3IuF:/home/lee/.nvm/versions/node/v24.15.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/path:/home/lee/.nvm/versions/node/v24.15.0/bin:/opt/ros/humble/bin:/home/lee/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/lee-OMEN-Gaming-Laptop-16-ap0xxx:@/tmp/.ICE-unix/1953,unix/lee-OMEN-Gaming-Laptop-16-ap0xxx:/tmp/.ICE-unix/1953'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/45fb9cf8_7880_4455_b7e4_9ad6b53bdab8'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':1'), ('CODEX_SANDBOX_NETWORK_DISABLED', '1'), ('LANG', 'C.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('GH_PAGER', 'cat'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.102'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1000/keyring/ssh'), ('ROS_DOMAIN_ID', '27'), ('AMENT_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_py_pkg:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('CODEX_THREAD_ID', '019e80b3-8769-7bd2-9cf3-f141c6470288'), ('GPG_AGENT_INFO', '/run/user/1000/gnupg/S.gpg-agent:0:1'), ('GIT_PAGER', 'cat'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology'), ('LC_ALL', 'C.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('NVM_CD_FLAGS', ''), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/lee/smart_car_ws/install/smart_car_py_pkg/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CODEX_MANAGED_BY_NPM', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology:/home/lee/smart_car_ws/install/smart_car_cpp_pkg:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble')]), 'shell': False}
+[7.964111] (amr_topology) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[7.964281] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/lib/amr_topology/topology_follower\n'}
+[7.964318] (amr_topology) StdoutLine: {'line': b'-- Installing: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/lib/amr_topology/mission_loop\n'}
+[7.967240] (amr_topology) StdoutLine: {'line': b'-- Set runtime path of "/home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/lib/amr_topology/mission_loop" to ""\n'}
+[7.967304] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/config\n'}
+[7.967332] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/config/topology.yaml\n'}
+[7.967359] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/launch\n'}
+[7.967385] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/launch/map_server.launch.py\n'}
+[7.967409] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/maps\n'}
+[7.967476] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/maps/map.pgm\n'}
+[7.967518] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/maps/map.yaml\n'}
+[7.967543] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/ament_index/resource_index/package_run_dependencies/amr_topology\n'}
+[7.967568] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/ament_index/resource_index/parent_prefix_path/amr_topology\n'}
+[7.967593] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/ament_prefix_path.sh\n'}
+[7.967637] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/ament_prefix_path.dsv\n'}
+[7.967661] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/path.sh\n'}
+[7.967683] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/environment/path.dsv\n'}
+[7.967709] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.bash\n'}
+[7.967733] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.sh\n'}
+[7.967755] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.zsh\n'}
+[7.967777] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/local_setup.dsv\n'}
+[7.967798] (amr_topology) StdoutLine: {'line': b'-- Installing: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/package.dsv\n'}
+[7.967819] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/ament_index/resource_index/packages/amr_topology\n'}
+[7.967844] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/cmake/amr_topologyConfig.cmake\n'}
+[7.967866] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/cmake/amr_topologyConfig-version.cmake\n'}
+[7.967888] (amr_topology) StdoutLine: {'line': b'-- Up-to-date: /home/lee/Downloads/Topology_Graph_test-main/install/amr_topology/share/amr_topology/package.xml\n'}
+[8.019848] (-) TimerEvent: {}
+[8.140556] (-) TimerEvent: {}
+[8.240801] (-) TimerEvent: {}
+[8.341080] (-) TimerEvent: {}
+[8.442391] (-) TimerEvent: {}
+[8.543037] (-) TimerEvent: {}
+[8.643318] (-) TimerEvent: {}
+[8.743581] (-) TimerEvent: {}
+[8.843839] (-) TimerEvent: {}
+[8.944108] (-) TimerEvent: {}
+[9.044860] (-) TimerEvent: {}
+[9.145134] (-) TimerEvent: {}
+[9.245407] (-) TimerEvent: {}
+[9.346049] (-) TimerEvent: {}
+[9.446689] (-) TimerEvent: {}
+[9.547421] (-) TimerEvent: {}
+[9.648067] (-) TimerEvent: {}
+[9.748731] (-) TimerEvent: {}
+[9.848992] (-) TimerEvent: {}
+[9.949629] (-) TimerEvent: {}
+[10.050290] (-) TimerEvent: {}
+[10.150934] (-) TimerEvent: {}
+[10.251570] (-) TimerEvent: {}
+[10.352204] (-) TimerEvent: {}
+[10.452842] (-) TimerEvent: {}
+[10.553115] (-) TimerEvent: {}
+[10.653340] (-) TimerEvent: {}
+[10.753543] (-) TimerEvent: {}
+[10.853751] (-) TimerEvent: {}
+[10.953949] (-) TimerEvent: {}
+[11.054330] (-) TimerEvent: {}
+[11.154972] (-) TimerEvent: {}
+[11.255175] (-) TimerEvent: {}
+[11.355801] (-) TimerEvent: {}
+[11.456604] (-) TimerEvent: {}
+[11.557246] (-) TimerEvent: {}
+[11.657448] (-) TimerEvent: {}
+[11.757985] (-) TimerEvent: {}
+[11.858650] (-) TimerEvent: {}
+[11.959190] (-) TimerEvent: {}
+[12.059426] (-) TimerEvent: {}
+[12.160062] (-) TimerEvent: {}
+[12.260801] (-) TimerEvent: {}
+[12.361438] (-) TimerEvent: {}
+[12.461674] (-) TimerEvent: {}
+[12.562319] (-) TimerEvent: {}
+[12.662956] (-) TimerEvent: {}
+[12.763754] (-) TimerEvent: {}
+[12.863954] (-) TimerEvent: {}
+[12.964163] (-) TimerEvent: {}
+[13.064798] (-) TimerEvent: {}
+[13.165445] (-) TimerEvent: {}
+[13.265738] (-) TimerEvent: {}
+[13.365971] (-) TimerEvent: {}
+[13.466608] (-) TimerEvent: {}
+[13.567318] (-) TimerEvent: {}
+[13.667984] (-) TimerEvent: {}
+[13.768215] (-) TimerEvent: {}
+[13.868879] (-) TimerEvent: {}
+[13.969561] (-) TimerEvent: {}
+[14.069882] (-) TimerEvent: {}
+[14.170088] (-) TimerEvent: {}
+[14.270336] (-) TimerEvent: {}
+[14.370601] (-) TimerEvent: {}
+[14.471234] (-) TimerEvent: {}
+[14.571470] (-) TimerEvent: {}
+[14.671693] (-) TimerEvent: {}
+[14.772370] (-) TimerEvent: {}
+[14.873017] (-) TimerEvent: {}
+[14.973247] (-) TimerEvent: {}
+[15.073474] (-) TimerEvent: {}
+[15.173724] (-) TimerEvent: {}
+[15.274364] (-) TimerEvent: {}
+[15.374594] (-) TimerEvent: {}
+[15.474763] (-) TimerEvent: {}
+[15.574972] (-) TimerEvent: {}
+[15.675622] (-) TimerEvent: {}
+[15.776292] (-) TimerEvent: {}
+[15.876548] (-) TimerEvent: {}
+[15.976761] (-) TimerEvent: {}
+[16.077373] (-) TimerEvent: {}
+[16.178127] (-) TimerEvent: {}
+[16.278800] (-) TimerEvent: {}
+[16.379037] (-) TimerEvent: {}
+[16.479679] (-) TimerEvent: {}
+[16.580188] (-) TimerEvent: {}
+[16.680838] (-) TimerEvent: {}
+[16.781053] (-) TimerEvent: {}
+[16.881259] (-) TimerEvent: {}
+[16.981883] (-) TimerEvent: {}
+[17.082565] (-) TimerEvent: {}
+[17.183109] (-) TimerEvent: {}
+[17.283294] (-) TimerEvent: {}
+[17.383532] (-) TimerEvent: {}
+[17.484250] (-) TimerEvent: {}
+[17.584483] (-) TimerEvent: {}
+[17.684681] (-) TimerEvent: {}
+[17.784908] (-) TimerEvent: {}
+[17.885547] (-) TimerEvent: {}
+[17.985803] (-) TimerEvent: {}
+[18.086005] (-) TimerEvent: {}
+[18.186396] (-) TimerEvent: {}
+[18.287035] (-) TimerEvent: {}
+[18.387675] (-) TimerEvent: {}
+[18.487957] (-) TimerEvent: {}
+[18.588624] (-) TimerEvent: {}
+[18.689379] (-) TimerEvent: {}
+[18.790022] (-) TimerEvent: {}
+[18.890261] (-) TimerEvent: {}
+[18.990891] (-) TimerEvent: {}
+[19.091526] (-) TimerEvent: {}
+[19.192162] (-) TimerEvent: {}
+[19.292795] (-) TimerEvent: {}
+[19.392995] (-) TimerEvent: {}
+[19.493599] (-) TimerEvent: {}
+[19.594236] (-) TimerEvent: {}
+[19.694437] (-) TimerEvent: {}
+[19.794619] (-) TimerEvent: {}
+[19.894825] (-) TimerEvent: {}
+[19.995527] (-) TimerEvent: {}
+[20.096168] (-) TimerEvent: {}
+[20.196399] (-) TimerEvent: {}
+[20.297015] (-) TimerEvent: {}
+[20.397661] (-) TimerEvent: {}
+[20.498323] (-) TimerEvent: {}
+[20.598522] (-) TimerEvent: {}
+[20.698765] (-) TimerEvent: {}
+[20.799047] (-) TimerEvent: {}
+[20.899746] (-) TimerEvent: {}
+[21.000069] (-) TimerEvent: {}
+[21.100724] (-) TimerEvent: {}
+[21.201659] (-) TimerEvent: {}
+[21.301928] (-) TimerEvent: {}
+[21.402610] (-) TimerEvent: {}
+[21.503279] (-) TimerEvent: {}
+[21.603922] (-) TimerEvent: {}
+[21.704204] (-) TimerEvent: {}
+[21.804970] (-) TimerEvent: {}
+[21.905237] (-) TimerEvent: {}
+[22.005879] (-) TimerEvent: {}
+[22.106091] (-) TimerEvent: {}
+[22.206305] (-) TimerEvent: {}
+[22.306946] (-) TimerEvent: {}
+[22.407799] (-) TimerEvent: {}
+[22.508045] (-) TimerEvent: {}
+[22.608304] (-) TimerEvent: {}
+[22.708937] (-) TimerEvent: {}
+[22.809574] (-) TimerEvent: {}
+[22.909789] (-) TimerEvent: {}
+[23.010000] (-) TimerEvent: {}
+[23.110632] (-) TimerEvent: {}
+[23.211291] (-) TimerEvent: {}
+[23.311546] (-) TimerEvent: {}
+[23.411769] (-) TimerEvent: {}
+[23.512382] (-) TimerEvent: {}
+[23.613018] (-) TimerEvent: {}
+[23.713298] (-) TimerEvent: {}
+[23.813563] (-) TimerEvent: {}
+[23.913805] (-) TimerEvent: {}
+[24.014439] (-) TimerEvent: {}
+[24.115078] (-) TimerEvent: {}
+[24.215290] (-) TimerEvent: {}
+[24.315509] (-) TimerEvent: {}
+[24.416143] (-) TimerEvent: {}
+[24.516802] (-) TimerEvent: {}
+[24.617439] (-) TimerEvent: {}
+[24.718848] (-) TimerEvent: {}
+[24.819480] (-) TimerEvent: {}
+[24.920119] (-) TimerEvent: {}
+[25.020775] (-) TimerEvent: {}
+[25.121409] (-) TimerEvent: {}
+[25.222101] (-) TimerEvent: {}
+[25.322351] (-) TimerEvent: {}
+[25.422623] (-) TimerEvent: {}
+[25.522908] (-) TimerEvent: {}
+[25.623134] (-) TimerEvent: {}
+[25.723793] (-) TimerEvent: {}
+[25.824438] (-) TimerEvent: {}
+[25.924642] (-) TimerEvent: {}
+[26.025255] (-) TimerEvent: {}
+[26.125896] (-) TimerEvent: {}
+[26.226107] (-) TimerEvent: {}
+[26.326284] (-) TimerEvent: {}
+[26.426892] (-) TimerEvent: {}
+[26.527536] (-) TimerEvent: {}
+[26.628246] (-) TimerEvent: {}
+[26.729413] (-) TimerEvent: {}
+[26.829620] (-) TimerEvent: {}
+[26.930263] (-) TimerEvent: {}
+[27.030912] (-) TimerEvent: {}
+[27.131141] (-) TimerEvent: {}
+[27.231324] (-) TimerEvent: {}
+[27.331499] (-) TimerEvent: {}
+[27.431694] (-) TimerEvent: {}
+[27.532350] (-) TimerEvent: {}
+[27.633465] (-) TimerEvent: {}
+[27.733661] (-) TimerEvent: {}
+[27.833838] (-) TimerEvent: {}
+[27.934452] (-) TimerEvent: {}
+[28.034757] (-) TimerEvent: {}
+[28.135058] (-) TimerEvent: {}
+[28.235308] (-) TimerEvent: {}
+[28.335953] (-) TimerEvent: {}
+[28.436219] (-) TimerEvent: {}
+[28.536414] (-) TimerEvent: {}
+[28.636642] (-) TimerEvent: {}
+[28.737468] (-) TimerEvent: {}
+[28.838117] (-) TimerEvent: {}
+[28.938351] (-) TimerEvent: {}
+[29.038996] (-) TimerEvent: {}
+[29.139643] (-) TimerEvent: {}
+[29.240175] (-) TimerEvent: {}
+[29.340629] (-) TimerEvent: {}
+[29.440875] (-) TimerEvent: {}
+[29.541536] (-) TimerEvent: {}
+[29.642189] (-) TimerEvent: {}
+[29.742447] (-) TimerEvent: {}
+[29.843084] (-) TimerEvent: {}
+[29.943745] (-) TimerEvent: {}
+[30.022618] (amr_topology) CommandEnded: {'returncode': 0}
+[30.044260] (-) TimerEvent: {}
+[30.096548] (amr_topology) JobEnded: {'identifier': 'amr_topology', 'rc': 0}
+[30.097141] (-) EventReactorShutdown: {}

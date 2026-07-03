@@ -34,9 +34,6 @@ std::array<double, 3> color_for_name(const std::string & name)
   if (name == "intersection_1" || name.rfind("a_", 0) == 0) {
     return {1.0, 0.1, 0.1};
   }
-  if (name == "intersection_2" || name.rfind("b_", 0) == 0) {
-    return {0.1, 0.35, 1.0};
-  }
   if (name == "loading") {
     return {0.85, 0.85, 0.85};
   }
@@ -59,15 +56,9 @@ public:
     this->declare_parameter<double>("marker_radius", 0.08);
     this->declare_parameter<double>("marker_alpha", 0.85);
     this->declare_parameter<bool>("show_labels", true);
-    this->declare_parameter<bool>("show_rc_start", true);
-    this->declare_parameter<double>("rc_start_x", 2.471);
-    this->declare_parameter<double>("rc_start_y", -3.05);
     this->declare_parameter<bool>("show_rc_a_stop", true);
-    this->declare_parameter<double>("rc_a_stop_x", 0.4779384434223175);
-    this->declare_parameter<double>("rc_a_stop_y", 0.28734058141708374);
-    this->declare_parameter<bool>("show_rc_direct_a_stop_trigger", true);
-    this->declare_parameter<double>("rc_direct_a_stop_trigger_x", 0.774304094708256);
-    this->declare_parameter<double>("rc_direct_a_stop_trigger_y", 0.28734058141708374);
+    this->declare_parameter<double>("rc_a_stop_x", 0.7064711451530457);
+    this->declare_parameter<double>("rc_a_stop_y", 0.29016929864883423);
 
     frame_id_ = this->get_parameter("frame_id").as_string();
     marker_radius_ = this->get_parameter("marker_radius").as_double();
@@ -109,19 +100,6 @@ private:
       markers_.push_back(point);
     }
 
-    if (this->get_parameter("show_rc_start").as_bool()) {
-      MarkerPoint point;
-      point.name = "rc_start";
-      point.label = "rc_car_start";
-      point.x = this->get_parameter("rc_start_x").as_double();
-      point.y = this->get_parameter("rc_start_y").as_double();
-      point.r = 1.0;
-      point.g = 0.95;
-      point.b = 0.05;
-      point.radius = marker_radius_ * 1.15;
-      markers_.push_back(point);
-    }
-
     if (this->get_parameter("show_rc_a_stop").as_bool()) {
       MarkerPoint point;
       point.name = "rc_a_stop";
@@ -135,18 +113,6 @@ private:
       markers_.push_back(point);
     }
 
-    if (this->get_parameter("show_rc_direct_a_stop_trigger").as_bool()) {
-      MarkerPoint point;
-      point.name = "rc_direct_a_stop_trigger";
-      point.label = "rc_direct_a_stop_trigger";
-      point.x = this->get_parameter("rc_direct_a_stop_trigger_x").as_double();
-      point.y = this->get_parameter("rc_direct_a_stop_trigger_y").as_double();
-      point.r = 0.1;
-      point.g = 0.95;
-      point.b = 0.35;
-      point.radius = marker_radius_ * 1.15;
-      markers_.push_back(point);
-    }
   }
 
   visualization_msgs::msg::Marker make_circle_marker(const MarkerPoint & point, int id) const
@@ -197,6 +163,13 @@ private:
   void publish_markers()
   {
     visualization_msgs::msg::MarkerArray marker_array;
+
+    visualization_msgs::msg::Marker clear_marker;
+    clear_marker.header.frame_id = frame_id_;
+    clear_marker.header.stamp = this->now();
+    clear_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+    marker_array.markers.push_back(clear_marker);
+
     int id = 0;
     for (const auto & point : markers_) {
       marker_array.markers.push_back(make_circle_marker(point, id++));

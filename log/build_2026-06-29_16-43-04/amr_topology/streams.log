@@ -1,0 +1,26 @@
+[0.006s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.036s] Consolidate compiler generated dependencies of target rc_car_follower_node
+[0.042s] [ 66%] Built target image_rotate_compress_node
+[0.042s] [ 66%] Built target topology_follower
+[0.042s] [ 66%] Built target topology_marker_node
+[0.042s] [ 66%] Built target aruco_marker_detector_node
+[0.042s] [ 66%] Built target image_rotate_node
+[0.042s] [ 86%] Built target mission_loop
+[0.042s] [ 93%] Building CXX object CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o
+[1.836s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In member function ‘{anonymous}::PwmCommand RcCarFollowerNode::make_rc_car_start_command(const {anonymous}::Pose2D&)’:
+[1.836s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1498:24: error: redeclaration of ‘const double target_heading’
+[1.836s]  1498 |           const double target_heading =
+[1.836s]       |                        ^~~~~~~~~~~~~~
+[1.836s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1490:24: note: ‘const double target_heading’ previously declared here
+[1.836s]  1490 |           const double target_heading =
+[1.836s]       |                        ^~~~~~~~~~~~~~
+[1.836s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1500:24: error: redeclaration of ‘const double heading_error’
+[1.836s]  1500 |           const double heading_error = normalize_angle(target_heading - follower.yaw);
+[1.836s]       |                        ^~~~~~~~~~~~~
+[1.836s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1492:24: note: ‘const double heading_error’ previously declared here
+[1.836s]  1492 |           const double heading_error = normalize_angle(target_heading - follower.yaw);
+[1.836s]       |                        ^~~~~~~~~~~~~
+[6.164s] gmake[2]: *** [CMakeFiles/rc_car_follower_node.dir/build.make:76: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o] Error 1
+[6.164s] gmake[1]: *** [CMakeFiles/Makefile2:227: CMakeFiles/rc_car_follower_node.dir/all] Error 2
+[6.164s] gmake: *** [Makefile:146: all] Error 2
+[6.165s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

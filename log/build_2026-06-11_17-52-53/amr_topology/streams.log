@@ -1,0 +1,26 @@
+[0.008s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.040s] Consolidate compiler generated dependencies of target mission_loop
+[0.047s] [ 28%] Built target topology_follower
+[0.047s] [ 57%] Built target rc_car_follower_node
+[0.048s] [ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[0.049s] [ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+[0.403s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘amr_topology::LocalPlannerDecision amr_topology::LocalAStarPurePursuit::update(const amr_topology::Pose2D&, const amr_topology::Target2D&, const rclcpp::Time&)’:
+[0.403s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:126:24: error: ‘Backup’ is not a member of ‘amr_topology::LocalAStarPurePursuit::State’
+[0.403s]   126 |   if (state_ == State::Backup) {
+[0.403s]       |                        ^~~~~~
+[0.403s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:188:17: error: ‘Backup’ is not a member of ‘amr_topology::LocalAStarPurePursuit::State’
+[0.403s]   188 |     case State::Backup: {
+[0.403s]       |                 ^~~~~~
+[0.411s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘void amr_topology::LocalAStarPurePursuit::reset()’:
+[0.411s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:291:3: error: ‘backup_started_pose_’ was not declared in this scope
+[0.411s]   291 |   backup_started_pose_ = Pose2D{};
+[0.411s]       |   ^~~~~~~~~~~~~~~~~~~~
+[0.430s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘std::string amr_topology::LocalAStarPurePursuit::state_name() const’:
+[0.430s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:734:17: error: ‘Backup’ is not a member of ‘amr_topology::LocalAStarPurePursuit::State’
+[0.430s]   734 |     case State::Backup:
+[0.430s]       |                 ^~~~~~
+[0.539s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:90: CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o] Error 1
+[0.540s] gmake[2]: *** Waiting for unfinished jobs....
+[11.484s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[11.484s] gmake: *** [Makefile:146: all] Error 2
+[11.486s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

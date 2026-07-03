@@ -1,0 +1,51 @@
+[0.006s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.034s] Consolidate compiler generated dependencies of target mission_loop
+[0.038s] [ 28%] Built target rc_car_follower_node
+[0.039s] [ 42%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[0.039s] [ 71%] Built target topology_follower
+[1.481s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+[1.481s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:219:5: error: ‘corridor_forward_clearance_’ was not declared in this scope; did you mean ‘corridor_side_clearance_’?
+[1.481s]   219 |     corridor_forward_clearance_ =
+[1.482s]       |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.482s]       |     corridor_side_clearance_
+[1.590s] In file included from /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21,
+[1.590s]                  from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+[1.590s]                  from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:18:
+[1.590s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_path(const std::vector<std::__cxx11::basic_string<char> >&)’:
+[1.591s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:509:13: error: ‘corridor_forward_clearance_’ was not declared in this scope; did you mean ‘corridor_side_clearance_’?
+[1.591s]   509 |             corridor_forward_clearance_);
+[1.591s]       |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.601s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘std::optional<MissionLoop::CorridorPassDecision> MissionLoop::evaluate_corridor_pass() const’:
+[1.601s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:803:39: error: ‘corridor_forward_clearance_’ was not declared in this scope; did you mean ‘corridor_side_clearance_’?
+[1.601s]   803 |       decision.selected_forward_min < corridor_forward_clearance_;
+[1.601s]       |                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.602s]       |                                       corridor_side_clearance_
+[1.648s] In file included from /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21,
+[1.648s]                  from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+[1.648s]                  from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:18:
+[1.649s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_to_precision_slot(const string&)’:
+[1.649s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1102:13: error: ‘corridor_forward_clearance_’ was not declared in this scope; did you mean ‘corridor_side_clearance_’?
+[1.649s]  1102 |             corridor_forward_clearance_);
+[1.649s]       |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[4.800s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[4.800s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[4.800s] gmake: *** [Makefile:146: all] Error 2
+[30.011s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

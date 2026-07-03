@@ -1,0 +1,33 @@
+Consolidate compiler generated dependencies of target mission_loop
+[ 28%] Built target rc_car_follower_node
+[ 57%] Built target topology_follower
+[ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘amr_topology::LocalPlannerDecision amr_topology::LocalAStarPurePursuit::update(const amr_topology::Pose2D&, const amr_topology::Target2D&, const rclcpp::Time&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:221:17: error: jump to case label
+  221 |     case State::Backup: {
+      |                 ^~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:200:20: note:   crosses initialization of ‘const double stop_seconds’
+  200 |       const double stop_seconds = stop_started_by_front_emergency_ ?
+      |                    ^~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:251:17: error: jump to case label
+  251 |     case State::FollowDetour: {
+      |                 ^~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:200:20: note:   crosses initialization of ‘const double stop_seconds’
+  200 |       const double stop_seconds = stop_started_by_front_emergency_ ?
+      |                    ^~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:279:17: error: jump to case label
+  279 |     case State::Blocked:
+      |                 ^~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:200:20: note:   crosses initialization of ‘const double stop_seconds’
+  200 |       const double stop_seconds = stop_started_by_front_emergency_ ?
+      |                    ^~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:182:10: warning: enumeration value ‘Backup’ not handled in switch [-Wswitch]
+  182 |   switch (state_) {
+      |          ^
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:182:10: warning: enumeration value ‘FollowDetour’ not handled in switch [-Wswitch]
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:182:10: warning: enumeration value ‘Blocked’ not handled in switch [-Wswitch]
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:90: CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

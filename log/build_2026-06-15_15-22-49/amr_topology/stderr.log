@@ -1,0 +1,134 @@
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In constructor ‘RcCarFollowerNode::RcCarFollowerNode()’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:301:34: error: no matching function for call to ‘clamp(int64_t, int, int)’
+  301 |     min_forward_pwm_ = std::clamp(this->get_parameter("min_forward_pwm").as_int(), 0, 255);
+      |                        ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note: candidate: ‘template<class _Tp> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&)’
+ 3656 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:301:34: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  301 |     min_forward_pwm_ = std::clamp(this->get_parameter("min_forward_pwm").as_int(), 0, 255);
+      |                        ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: candidate: ‘template<class _Tp, class _Compare> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&, _Compare)’
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:301:34: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  301 |     min_forward_pwm_ = std::clamp(this->get_parameter("min_forward_pwm").as_int(), 0, 255);
+      |                        ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:302:35: error: no matching function for call to ‘clamp(int64_t, int, int)’
+  302 |     base_forward_pwm_ = std::clamp(this->get_parameter("base_forward_pwm").as_int(), 0, 255);
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note: candidate: ‘template<class _Tp> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&)’
+ 3656 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:302:35: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  302 |     base_forward_pwm_ = std::clamp(this->get_parameter("base_forward_pwm").as_int(), 0, 255);
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: candidate: ‘template<class _Tp, class _Compare> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&, _Compare)’
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:302:35: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  302 |     base_forward_pwm_ = std::clamp(this->get_parameter("base_forward_pwm").as_int(), 0, 255);
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:303:34: error: no matching function for call to ‘clamp(int64_t, int, int)’
+  303 |     max_forward_pwm_ = std::clamp(this->get_parameter("max_forward_pwm").as_int(), 0, 255);
+      |                        ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note: candidate: ‘template<class _Tp> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&)’
+ 3656 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:303:34: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  303 |     max_forward_pwm_ = std::clamp(this->get_parameter("max_forward_pwm").as_int(), 0, 255);
+      |                        ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: candidate: ‘template<class _Tp, class _Compare> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&, _Compare)’
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:303:34: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  303 |     max_forward_pwm_ = std::clamp(this->get_parameter("max_forward_pwm").as_int(), 0, 255);
+      |                        ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:304:30: error: no matching function for call to ‘clamp(int64_t, int, int)’
+  304 |     reverse_pwm_ = std::clamp(this->get_parameter("reverse_pwm").as_int(), 0, 255);
+      |                    ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note: candidate: ‘template<class _Tp> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&)’
+ 3656 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:304:30: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  304 |     reverse_pwm_ = std::clamp(this->get_parameter("reverse_pwm").as_int(), 0, 255);
+      |                    ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: candidate: ‘template<class _Tp, class _Compare> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&, _Compare)’
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:304:30: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  304 |     reverse_pwm_ = std::clamp(this->get_parameter("reverse_pwm").as_int(), 0, 255);
+      |                    ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:305:33: error: no matching function for call to ‘clamp(int64_t, int, int)’
+  305 |     turn_pwm_delta_ = std::clamp(this->get_parameter("turn_pwm_delta").as_int(), 0, 255);
+      |                       ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note: candidate: ‘template<class _Tp> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&)’
+ 3656 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:305:33: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  305 |     turn_pwm_delta_ = std::clamp(this->get_parameter("turn_pwm_delta").as_int(), 0, 255);
+      |                       ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: candidate: ‘template<class _Tp, class _Compare> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&, _Compare)’
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:305:33: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  305 |     turn_pwm_delta_ = std::clamp(this->get_parameter("turn_pwm_delta").as_int(), 0, 255);
+      |                       ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:306:36: error: no matching function for call to ‘clamp(int64_t, int, int)’
+  306 |     in_place_turn_pwm_ = std::clamp(this->get_parameter("in_place_turn_pwm").as_int(), 0, 255);
+      |                          ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note: candidate: ‘template<class _Tp> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&)’
+ 3656 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3656:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:306:36: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  306 |     in_place_turn_pwm_ = std::clamp(this->get_parameter("in_place_turn_pwm").as_int(), 0, 255);
+      |                          ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/algorithm:62,
+                 from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note: candidate: ‘template<class _Tp, class _Compare> constexpr const _Tp& std::clamp(const _Tp&, const _Tp&, const _Tp&, _Compare)’
+ 3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+      |     ^~~~~
+/usr/include/c++/11/bits/stl_algo.h:3674:5: note:   template argument deduction/substitution failed:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:306:36: note:   deduced conflicting types for parameter ‘const _Tp’ (‘long int’ and ‘int’)
+  306 |     in_place_turn_pwm_ = std::clamp(this->get_parameter("in_place_turn_pwm").as_int(), 0, 255);
+      |                          ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In member function ‘bool RcCarFollowerNode::handle_intersection_1_left_turn(const {anonymous}::Pose2D&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:923:55: warning: unused parameter ‘follower’ [-Wunused-parameter]
+  923 |   bool handle_intersection_1_left_turn(const Pose2D & follower)
+      |                                        ~~~~~~~~~~~~~~~^~~~~~~~
+gmake[2]: *** [CMakeFiles/rc_car_follower_node.dir/build.make:76: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:193: CMakeFiles/rc_car_follower_node.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

@@ -1,0 +1,19 @@
+[0.007s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.040s] Consolidate compiler generated dependencies of target mission_loop
+[0.047s] [ 14%] Building CXX object CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o
+[0.047s] [ 42%] Built target topology_follower
+[0.048s] [ 85%] Built target mission_loop
+[1.450s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In constructor ‘RcCarFollowerNode::RcCarFollowerNode()’:
+[1.450s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:234:25: error: ‘clamp’ was not declared in this scope; did you mean ‘std::clamp’?
+[1.451s]   234 |     drive_duty_cycle_ = clamp(
+[1.451s]       |                         ^~~~~
+[1.451s]       |                         std::clamp
+[1.451s] In file included from /usr/include/c++/11/algorithm:62,
+[1.451s]                  from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:1:
+[1.451s] /usr/include/c++/11/bits/stl_algo.h:3674:5: note: ‘std::clamp’ declared here
+[1.451s]  3674 |     clamp(const _Tp& __val, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+[1.451s]       |     ^~~~~
+[3.853s] gmake[2]: *** [CMakeFiles/rc_car_follower_node.dir/build.make:76: CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o] Error 1
+[3.853s] gmake[1]: *** [CMakeFiles/Makefile2:193: CMakeFiles/rc_car_follower_node.dir/all] Error 2
+[3.853s] gmake: *** [Makefile:146: all] Error 2
+[3.855s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

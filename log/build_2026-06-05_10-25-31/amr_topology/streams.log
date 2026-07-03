@@ -1,0 +1,20 @@
+[0.006s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.039s] Consolidate compiler generated dependencies of target mission_loop
+[0.045s] [ 40%] Built target topology_follower
+[0.046s] [ 60%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+[0.047s] [ 80%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[0.436s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘amr_topology::LocalPlannerDecision amr_topology::LocalAStarPurePursuit::update(const amr_topology::Pose2D&, const amr_topology::Target2D&, const rclcpp::Time&)’:
+[0.436s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:158:17: error: jump to case label
+[0.436s]   158 |     case State::Blocked:
+[0.437s]       |                 ^~~~~~~
+[0.437s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:131:18: note:   crosses initialization of ‘const bool side_clear_for_return’
+[0.437s]   131 |       const bool side_clear_for_return =
+[0.437s]       |                  ^~~~~~~~~~~~~~~~~~~~~
+[0.437s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:104:10: warning: enumeration value ‘Blocked’ not handled in switch [-Wswitch]
+[0.437s]   104 |   switch (state_) {
+[0.437s]       |          ^
+[0.583s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:90: CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o] Error 1
+[0.583s] gmake[2]: *** Waiting for unfinished jobs....
+[10.229s] gmake[1]: *** [CMakeFiles/Makefile2:165: CMakeFiles/mission_loop.dir/all] Error 2
+[10.229s] gmake: *** [Makefile:146: all] Error 2
+[10.231s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

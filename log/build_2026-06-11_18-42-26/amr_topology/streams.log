@@ -1,0 +1,40 @@
+[0.007s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16
+[0.039s] Consolidate compiler generated dependencies of target mission_loop
+[0.046s] [ 57%] Built target topology_follower
+[0.046s] [ 57%] Built target rc_car_follower_node
+[0.047s] [ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[1.792s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In constructor ‘MissionLoop::MissionLoop()’:
+[1.792s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:242:5: error: ‘slot_obstacle_watch_radius_’ was not declared in this scope
+[1.792s]   242 |     slot_obstacle_watch_radius_ =
+[1.792s]       |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.803s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:244:5: error: ‘slot_obstacle_watch_max_distance_’ was not declared in this scope
+[1.803s]   244 |     slot_obstacle_watch_max_distance_ =
+[1.804s]       |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.839s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_path(const std::vector<std::__cxx11::basic_string<char> >&)’:
+[1.839s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:467:11: error: ‘wait_for_slot_area_clear’ was not declared in this scope; did you mean ‘wait_for_blocked_target_clear’?
+[1.839s]   467 |           wait_for_slot_area_clear(slot_area.value(), blocked_slot.value());
+[1.839s]       |           ^~~~~~~~~~~~~~~~~~~~~~~~
+[1.839s]       |           wait_for_blocked_target_clear
+[1.848s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:479:9: error: ‘wait_for_slot_area_clear’ was not declared in this scope; did you mean ‘wait_for_blocked_target_clear’?
+[1.848s]   479 |         wait_for_slot_area_clear(slot_area_for_node(target_name).value_or(""), target_name);
+[1.848s]       |         ^~~~~~~~~~~~~~~~~~~~~~~~
+[1.848s]       |         wait_for_blocked_target_clear
+[1.868s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘bool MissionLoop::slot_node_has_obstacle_nearby(const {anonymous}::RobotPose2D&, const {anonymous}::MissionNode&) const’:
+[1.868s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:731:25: error: ‘slot_obstacle_watch_max_distance_’ was not declared in this scope
+[1.868s]   731 |     if (node_distance > slot_obstacle_watch_max_distance_) {
+[1.868s]       |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.879s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:745:51: error: ‘slot_obstacle_watch_radius_’ was not declared in this scope
+[1.879s]   745 |       if (std::hypot(wx - node.x, wy - node.y) <= slot_obstacle_watch_radius_) {
+[1.880s]       |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.916s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::wait_for_blocked_target_clear(const string&, const {anonymous}::MissionNode&)’:
+[1.916s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1177:36: error: ‘slot_zone_target_is_blocked’ was not declared in this scope
+[1.916s]  1177 |         const bool still_blocked = slot_zone_target_is_blocked(pose.value(), target);
+[1.916s]       |                                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1.927s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_to_precision_slot(const string&)’:
+[1.927s] /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:1240:9: error: ‘slot_zone_target_is_blocked’ was not declared in this scope
+[1.927s]  1240 |         slot_zone_target_is_blocked(pose.value(), target))
+[1.927s]       |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[5.672s] gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:76: CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o] Error 1
+[5.673s] gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+[5.673s] gmake: *** [Makefile:146: all] Error 2
+[5.675s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology -- -j16 -l16

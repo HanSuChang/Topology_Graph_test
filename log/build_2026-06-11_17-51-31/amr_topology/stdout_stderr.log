@@ -1,0 +1,17 @@
+Consolidate compiler generated dependencies of target mission_loop
+[ 42%] Built target rc_car_follower_node
+[ 57%] Built target topology_follower
+[ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+[ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:720:27: error: no declaration matches ‘geometry_msgs::msg::Twist amr_topology::LocalAStarPurePursuit::make_backup_command() const’
+  720 | geometry_msgs::msg::Twist LocalAStarPurePursuit::make_backup_command() const
+      |                           ^~~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:720:27: note: no functions named ‘geometry_msgs::msg::Twist amr_topology::LocalAStarPurePursuit::make_backup_command() const’
+In file included from /home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:1:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/include/amr_topology/local_astar_pure_pursuit.hpp:71:7: note: ‘class amr_topology::LocalAStarPurePursuit’ defined here
+   71 | class LocalAStarPurePursuit
+      |       ^~~~~~~~~~~~~~~~~~~~~
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:90: CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

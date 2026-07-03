@@ -1,0 +1,24 @@
+Consolidate compiler generated dependencies of target mission_loop
+[ 28%] Built target topology_follower
+[ 57%] Built target rc_car_follower_node
+[ 71%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
+[ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘amr_topology::LocalPlannerDecision amr_topology::LocalAStarPurePursuit::update(const amr_topology::Pose2D&, const amr_topology::Target2D&, const rclcpp::Time&)’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:126:24: error: ‘Backup’ is not a member of ‘amr_topology::LocalAStarPurePursuit::State’
+  126 |   if (state_ == State::Backup) {
+      |                        ^~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:188:17: error: ‘Backup’ is not a member of ‘amr_topology::LocalAStarPurePursuit::State’
+  188 |     case State::Backup: {
+      |                 ^~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘void amr_topology::LocalAStarPurePursuit::reset()’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:291:3: error: ‘backup_started_pose_’ was not declared in this scope
+  291 |   backup_started_pose_ = Pose2D{};
+      |   ^~~~~~~~~~~~~~~~~~~~
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp: In member function ‘std::string amr_topology::LocalAStarPurePursuit::state_name() const’:
+/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/local_astar_pure_pursuit.cpp:734:17: error: ‘Backup’ is not a member of ‘amr_topology::LocalAStarPurePursuit::State’
+  734 |     case State::Backup:
+      |                 ^~~~~~
+gmake[2]: *** [CMakeFiles/mission_loop.dir/build.make:90: CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[1]: *** [CMakeFiles/Makefile2:167: CMakeFiles/mission_loop.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2
