@@ -1,8 +1,0 @@
-Consolidate compiler generated dependencies of target rc_car_follower_node
-[ 66%] Built target image_rotate_compress_node
-[ 66%] Built target topology_follower
-[ 66%] Built target topology_marker_node
-[ 66%] Built target aruco_marker_detector_node
-[ 66%] Built target image_rotate_node
-[ 86%] Built target mission_loop
-[ 93%] Building CXX object CMakeFiles/rc_car_follower_node.dir/src/rc_car_follower_node.cpp.o

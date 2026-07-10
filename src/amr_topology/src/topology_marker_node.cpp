@@ -34,6 +34,9 @@ std::array<double, 3> color_for_name(const std::string & name)
   if (name == "intersection_1" || name.rfind("a_", 0) == 0) {
     return {1.0, 0.1, 0.1};
   }
+  if (name.rfind("b_", 0) == 0 || name.rfind("rc_b_", 0) == 0) {
+    return {0.1, 0.35, 1.0};
+  }
   if (name == "loading") {
     return {0.85, 0.85, 0.85};
   }
@@ -59,6 +62,9 @@ public:
     this->declare_parameter<bool>("show_rc_a_stop", true);
     this->declare_parameter<double>("rc_a_stop_x", 0.7064711451530457);
     this->declare_parameter<double>("rc_a_stop_y", 0.29016929864883423);
+    this->declare_parameter<bool>("show_rc_b_stop", true);
+    this->declare_parameter<double>("rc_b_stop_x", 0.7269076704978943);
+    this->declare_parameter<double>("rc_b_stop_y", -1.4004881381988525);
 
     frame_id_ = this->get_parameter("frame_id").as_string();
     marker_radius_ = this->get_parameter("marker_radius").as_double();
@@ -106,6 +112,19 @@ private:
       point.label = "rc_car_a_stop";
       point.x = this->get_parameter("rc_a_stop_x").as_double();
       point.y = this->get_parameter("rc_a_stop_y").as_double();
+      point.r = 1.0;
+      point.g = 0.1;
+      point.b = 0.1;
+      point.radius = marker_radius_ * 1.15;
+      markers_.push_back(point);
+    }
+
+    if (this->get_parameter("show_rc_b_stop").as_bool()) {
+      MarkerPoint point;
+      point.name = "rc_b_stop";
+      point.label = "rc_car_b_stop";
+      point.x = this->get_parameter("rc_b_stop_x").as_double();
+      point.y = this->get_parameter("rc_b_stop_y").as_double();
       point.r = 1.0;
       point.g = 0.1;
       point.b = 0.1;

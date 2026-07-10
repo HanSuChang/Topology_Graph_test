@@ -1,1 +1,0 @@
-ament_index_cpp;geometry_msgs;nav_msgs;nav2_msgs;opencv;rclcpp;rclcpp_action;sensor_msgs;std_msgs;tf2_ros;visualization_msgs;yaml-cpp;launch;launch_ros;nav2_map_server;nav2_lifecycle_manager;rqt_image_view;rviz2;v4l2_camera;ament_copyright;ament_flake8;ament_pep257;python3-pytest

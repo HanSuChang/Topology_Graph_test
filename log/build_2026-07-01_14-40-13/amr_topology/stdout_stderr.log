@@ -1,3 +1,0 @@
-[ 33%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
-[ 66%] Linking CXX executable mission_loop
-[100%] Built target mission_loop

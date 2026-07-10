@@ -25,6 +25,24 @@ nodes:
     yaw: 0.0
     type: stationing_slot
 
+  intersection_2:
+    x: 2.478525400161743
+    y: -1.389811635017395
+    yaw: 0.0
+    type: intersection
+
+  b_entry:
+    x: 1.209195852279663
+    y: -1.3838512897491455
+    yaw: 0.0
+    type: area_entry
+
+  b_leader_slot:
+    x: 0.01311033871024847
+    y: -1.3952621221542358
+    yaw: 0.0
+    type: stationing_slot
+
   charger_front:
     x: 0.10498535633087158
     y: -2.760960578918457
@@ -32,8 +50,8 @@ nodes:
     type: charger
 
   charger_entry:
-    x: 0.2130746841430664
-    y: -2.053251266479492
+    x: 0.6978071331977844
+    y: -1.8588165044784546
     yaw: 0.0
     type: charger_entry
 
@@ -56,6 +74,21 @@ edges:
 
   - from: a_entry
     to: a_leader_slot
+    bidirectional: true
+    speed_limit: 0.10
+
+  - from: loading
+    to: intersection_2
+    bidirectional: true
+    speed_limit: 0.18
+
+  - from: intersection_2
+    to: b_entry
+    bidirectional: true
+    speed_limit: 0.18
+
+  - from: b_entry
+    to: b_leader_slot
     bidirectional: true
     speed_limit: 0.10
 

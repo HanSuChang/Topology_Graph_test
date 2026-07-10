@@ -1,5 +1,0 @@
-[0.008s] Invoking command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology --target topology_marker_node -- -j16 -l16
-[0.078s] [ 50%] Building CXX object CMakeFiles/topology_marker_node.dir/src/topology_marker_node.cpp.o
-[2.887s] [100%] Linking CXX executable topology_marker_node
-[3.010s] [100%] Built target topology_marker_node
-[3.017s] Invoked command in '/home/lee/Downloads/Topology_Graph_test-main/build/amr_topology' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/lee/smart_car_ws/install/smart_car_py_pkg:/opt/ros/humble /usr/bin/cmake --build /home/lee/Downloads/Topology_Graph_test-main/build/amr_topology --target topology_marker_node -- -j16 -l16

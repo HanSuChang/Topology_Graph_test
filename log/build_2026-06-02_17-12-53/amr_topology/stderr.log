@@ -1,5 +1,0 @@
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp: In member function ‘void MissionLoop::go_path(const std::vector<std::__cxx11::basic_string<char> >&)’:
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:272:41: warning: converting to ‘geometry_msgs::msg::Twist’ {aka ‘geometry_msgs::msg::Twist_<std::allocator<void> >’} from initializer list would use explicit constructor ‘geometry_msgs::msg::Twist_<ContainerAllocator>::Twist_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
-  272 |         amr_topology::AvoidanceDecision{};
-      |                                         ^
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/mission_loop.cpp:272:41: note: in C++11 and above a default constructor can be explicit

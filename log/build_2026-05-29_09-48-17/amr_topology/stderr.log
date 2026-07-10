@@ -1,8 +1,0 @@
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/topology_follower.cpp: In member function ‘geometry_msgs::msg::Twist TopologyFollower::make_command(const RobotPose&, const PathPoint&)’:
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/topology_follower.cpp:256:55: error: ‘const struct PathPoint’ has no member named ‘yaw’
-  256 |       const double yaw_error = normalize_angle(target.yaw - pose.yaw);
-      |                                                       ^~~
-gmake[2]: *** [CMakeFiles/topology_follower.dir/build.make:76: CMakeFiles/topology_follower.dir/src/topology_follower.cpp.o] Error 1
-gmake[1]: *** [CMakeFiles/Makefile2:139: CMakeFiles/topology_follower.dir/all] Error 2
-gmake[1]: *** Waiting for unfinished jobs....
-gmake: *** [Makefile:146: all] Error 2

@@ -1,3 +1,0 @@
-[ 42%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o
-[ 42%] Built target topology_follower
-[ 71%] Built target rc_car_follower_node

@@ -1,4 +1,0 @@
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp: In member function ‘bool RcCarFollowerNode::handle_intersection_1_left_turn(const {anonymous}::Pose2D&)’:
-/home/lee/Downloads/Topology_Graph_test-main/src/amr_topology/src/rc_car_follower_node.cpp:929:55: warning: unused parameter ‘follower’ [-Wunused-parameter]
-  929 |   bool handle_intersection_1_left_turn(const Pose2D & follower)
-      |                                        ~~~~~~~~~~~~~~~^~~~~~~~

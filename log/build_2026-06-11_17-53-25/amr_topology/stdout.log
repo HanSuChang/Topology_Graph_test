@@ -1,4 +1,0 @@
-[ 28%] Built target topology_follower
-[ 57%] Building CXX object CMakeFiles/mission_loop.dir/src/local_astar_pure_pursuit.cpp.o
-[ 71%] Built target rc_car_follower_node
-[ 85%] Building CXX object CMakeFiles/mission_loop.dir/src/mission_loop.cpp.o

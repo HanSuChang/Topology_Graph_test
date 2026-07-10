@@ -47,6 +47,16 @@ def generate_launch_description():
         default_value='0.29016929864883423',
         description='RC car A slot stop marker y coordinate in map frame',
     )
+    rc_b_stop_x_arg = DeclareLaunchArgument(
+        'rc_b_stop_x',
+        default_value='0.7269076704978943',
+        description='RC car B slot stop marker x coordinate in map frame',
+    )
+    rc_b_stop_y_arg = DeclareLaunchArgument(
+        'rc_b_stop_y',
+        default_value='-1.4004881381988525',
+        description='RC car B slot stop marker y coordinate in map frame',
+    )
     marker_radius_arg = DeclareLaunchArgument(
         'marker_radius',
         default_value='0.08',
@@ -104,6 +114,8 @@ def generate_launch_description():
             'frame_id': 'map',
             'rc_a_stop_x': LaunchConfiguration('rc_a_stop_x'),
             'rc_a_stop_y': LaunchConfiguration('rc_a_stop_y'),
+            'rc_b_stop_x': LaunchConfiguration('rc_b_stop_x'),
+            'rc_b_stop_y': LaunchConfiguration('rc_b_stop_y'),
             'marker_radius': LaunchConfiguration('marker_radius'),
         }],
     )
@@ -114,6 +126,8 @@ def generate_launch_description():
         rviz_config_arg,
         rc_a_stop_x_arg,
         rc_a_stop_y_arg,
+        rc_b_stop_x_arg,
+        rc_b_stop_y_arg,
         marker_radius_arg,
         map_server,
         amcl,

@@ -1,0 +1,10 @@
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+build/
+install/
+log/
+charger_docking_debug/
+rosbag/
+symlink_install_manifest.txt

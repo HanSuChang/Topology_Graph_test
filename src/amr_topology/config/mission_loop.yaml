@@ -1,0 +1,10 @@
+mission_loop:
+  ros__parameters:
+    navigate_to_pose_action: "navigate_to_pose"
+    charger_nav2_server_wait_seconds: 5.0
+    charger_nav2_timeout_seconds: 45.0
+
+    # Keep reverse-docking yaw correction enabled, but do not run a separate
+    # in-place yaw alignment after stopping at the charger.
+    dock_angular_gain: 0.8
+    dock_max_reverse_angular_speed: 0.22

@@ -1,4 +1,0 @@
-Consolidate compiler generated dependencies of target mission_loop
-[ 28%] Built target rc_car_follower_node
-[ 57%] Built target topology_follower
-[ 71%] Linking CXX executable mission_loop

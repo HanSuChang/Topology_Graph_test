@@ -15,10 +15,11 @@
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <nav2_msgs/action/compute_path_to_pose.hpp>
 #include <nav2_msgs/action/follow_path.hpp>
+#include <nav2_msgs/action/navigate_to_pose.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/parameter_client.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
@@ -92,13 +93,13 @@ geometry_msgs::msg::Quaternion quaternion_from_yaw(double yaw)
 class MissionLoop : public rclcpp::Node
 {
 public:
-  using ComputePathToPose = nav2_msgs::action::ComputePathToPose;
-  using ComputePathToPoseGoalHandle = rclcpp_action::ClientGoalHandle<ComputePathToPose>;
   using FollowPath = nav2_msgs::action::FollowPath;
   using FollowPathGoalHandle = rclcpp_action::ClientGoalHandle<FollowPath>;
+  using NavigateToPose = nav2_msgs::action::NavigateToPose;
+  using NavigateToPoseGoalHandle = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
   MissionLoop()
-  : Node("mission_loop"),
+  : Node("mission2_loop"),
     tf_buffer_(this->get_clock()),
     tf_listener_(tf_buffer_)
   {
@@ -116,7 +117,6 @@ public:
     this->declare_parameter<std::string>("rc_car_odom_topic", "/rc_car/odom");
     this->declare_parameter<std::string>("aruco_enable_topic", "/aruco_marker/enable");
     this->declare_parameter<std::string>("aruco_target_topic", "/aruco_marker/target");
-    this->declare_parameter<std::string>("arm_mission_start_topic", "A_mission_start");
     this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<bool>("enable_lidar_safety", true);
@@ -129,9 +129,9 @@ public:
     this->declare_parameter<double>("yaw_tolerance", 0.08);
     this->declare_parameter<bool>("stop_rc_car_on_a_leader_slot_ccw_yaw", false);
     this->declare_parameter<double>("rc_car_a_slot_stop_yaw_delta", M_PI / 3.0);
-    this->declare_parameter<double>("rc_a_stop_x", 0.573159396648407);
-    this->declare_parameter<double>("rc_a_stop_y", -0.003990175202488899);
-    this->declare_parameter<double>("rc_a_stop_tolerance", 0.12);
+    this->declare_parameter<double>("rc_b_stop_x", 0.7269076704978943);
+    this->declare_parameter<double>("rc_b_stop_y", -1.4004881381988525);
+    this->declare_parameter<double>("rc_b_stop_tolerance", 0.12);
     this->declare_parameter<double>("max_linear_speed", 0.14);
     this->declare_parameter<double>("max_angular_speed", 0.45);
     this->declare_parameter<double>("linear_gain", 0.70);
@@ -171,13 +171,21 @@ public:
     this->declare_parameter<double>("local_planner_dynamic_obstacle_radius", 0.22);
     this->declare_parameter<double>("local_planner_path_corridor_width", 0.80);
     this->declare_parameter<bool>("enable_mppi_rescue", true);
-    this->declare_parameter<std::string>("compute_path_to_pose_action", "compute_path_to_pose");
     this->declare_parameter<std::string>("mppi_follow_path_action", "follow_path");
+    this->declare_parameter<std::string>("navigate_to_pose_action", "navigate_to_pose");
     this->declare_parameter<double>("charger_nav2_server_wait_seconds", 5.0);
     this->declare_parameter<double>("charger_nav2_timeout_seconds", 45.0);
     this->declare_parameter<double>("charger_nav2_stuck_seconds", 4.0);
     this->declare_parameter<double>("charger_nav2_stuck_distance", 0.04);
     this->declare_parameter<double>("charger_nav2_stuck_front_clearance", 0.36);
+    this->declare_parameter<std::string>(
+      "charger_global_costmap_node",
+      "/global_costmap/global_costmap");
+    this->declare_parameter<std::string>(
+      "charger_global_inflation_parameter",
+      "inflation_layer.inflation_radius");
+    this->declare_parameter<double>("charger_nav2_inflation_radius", 0.25);
+    this->declare_parameter<double>("charger_nav2_parameter_timeout_seconds", 2.0);
     this->declare_parameter<double>("charger_entry_accept_tolerance", 0.35);
     this->declare_parameter<double>("charger_entry_handoff_tolerance", 0.85);
     this->declare_parameter<double>("charger_entry_hold_handoff_tolerance", 1.20);
@@ -204,11 +212,14 @@ public:
     this->declare_parameter<double>("corridor_min_passage_width", 0.45);
     this->declare_parameter<double>("corridor_hard_stop_width", 0.40);
     this->declare_parameter<double>("corridor_max_lateral_offset", 0.24);
-    this->declare_parameter<bool>("enable_a_slot_aruco_follow", true);
+    this->declare_parameter<bool>("enable_a_slot_aruco_follow", false);
+    this->declare_parameter<bool>("enable_b_slot_aruco_follow", true);
     this->declare_parameter<double>("aruco_search_angular_speed", 0.18);
     this->declare_parameter<double>("aruco_approach_linear_speed", 0.045);
     this->declare_parameter<double>("aruco_approach_angular_gain", 0.40);
     this->declare_parameter<double>("aruco_stop_distance", 0.28);
+    this->declare_parameter<double>("b_slot_aruco_stop_distance", 0.36);
+    this->declare_parameter<double>("b_slot_aruco_final_yaw", M_PI_2);
     this->declare_parameter<double>("aruco_detection_timeout_seconds", 0.6);
     topology_file_ = this->get_parameter("topology_file").as_string();
     start_mode_ = this->get_parameter("start_mode").as_string();
@@ -226,10 +237,10 @@ public:
       this->get_parameter("stop_rc_car_on_a_leader_slot_ccw_yaw").as_bool();
     rc_car_a_slot_stop_yaw_delta_ = std::max(
       0.0, this->get_parameter("rc_car_a_slot_stop_yaw_delta").as_double());
-    rc_a_stop_x_ = this->get_parameter("rc_a_stop_x").as_double();
-    rc_a_stop_y_ = this->get_parameter("rc_a_stop_y").as_double();
-    rc_a_stop_tolerance_ = std::max(
-      0.01, this->get_parameter("rc_a_stop_tolerance").as_double());
+    rc_b_stop_x_ = this->get_parameter("rc_b_stop_x").as_double();
+    rc_b_stop_y_ = this->get_parameter("rc_b_stop_y").as_double();
+    rc_b_stop_tolerance_ = std::max(
+      0.01, this->get_parameter("rc_b_stop_tolerance").as_double());
     max_linear_speed_ = this->get_parameter("max_linear_speed").as_double();
     max_angular_speed_ = this->get_parameter("max_angular_speed").as_double();
     linear_gain_ = this->get_parameter("linear_gain").as_double();
@@ -303,6 +314,8 @@ public:
       this->get_parameter("corridor_max_lateral_offset").as_double();
     enable_a_slot_aruco_follow_ =
       this->get_parameter("enable_a_slot_aruco_follow").as_bool();
+    enable_b_slot_aruco_follow_ =
+      this->get_parameter("enable_b_slot_aruco_follow").as_bool();
     aruco_search_angular_speed_ =
       this->get_parameter("aruco_search_angular_speed").as_double();
     aruco_approach_linear_speed_ =
@@ -310,6 +323,10 @@ public:
     aruco_approach_angular_gain_ =
       this->get_parameter("aruco_approach_angular_gain").as_double();
     aruco_stop_distance_ = this->get_parameter("aruco_stop_distance").as_double();
+    b_slot_aruco_stop_distance_ =
+      this->get_parameter("b_slot_aruco_stop_distance").as_double();
+    b_slot_aruco_final_yaw_ =
+      this->get_parameter("b_slot_aruco_final_yaw").as_double();
     aruco_detection_timeout_seconds_ =
       this->get_parameter("aruco_detection_timeout_seconds").as_double();
     amr_topology::LocalPlannerOptions planner_options;
@@ -365,8 +382,6 @@ public:
     aruco_enable_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       this->get_parameter("aruco_enable_topic").as_string(),
       rclcpp::QoS(1).reliable().transient_local());
-    arm_mission_start_pub_ = this->create_publisher<std_msgs::msg::String>(
-      this->get_parameter("arm_mission_start_topic").as_string(), 10);
     aruco_target_sub_ = this->create_subscription<geometry_msgs::msg::PointStamped>(
       this->get_parameter("aruco_target_topic").as_string(),
       10,
@@ -381,12 +396,12 @@ public:
       std::bind(&MissionLoop::handle_rc_car_odom, this, std::placeholders::_1));
     rc_car_mode_timer_ = this->create_wall_timer(
       500ms, std::bind(&MissionLoop::republish_rc_car_mode, this));
-    compute_path_to_pose_client_ = rclcpp_action::create_client<ComputePathToPose>(
-      this,
-      this->get_parameter("compute_path_to_pose_action").as_string());
     mppi_follow_path_client_ = rclcpp_action::create_client<FollowPath>(
       this,
       this->get_parameter("mppi_follow_path_action").as_string());
+    navigate_to_pose_client_ = rclcpp_action::create_client<NavigateToPose>(
+      this,
+      this->get_parameter("navigate_to_pose_action").as_string());
 
     mission_command_sub_ = this->create_subscription<std_msgs::msg::String>(
       "mission_command",
@@ -414,22 +429,15 @@ public:
       return;
     }
 
-    RCLCPP_INFO(this->get_logger(), "Starting A-only mission loop");
+    RCLCPP_INFO(this->get_logger(), "Starting B-only mission loop");
 
     for (int cycle = 1; cycle <= repeat_count_ && rclcpp::ok(); ++cycle) {
-      RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to A", cycle, repeat_count_);
-      rc_a_stop_monitoring_ = true;
-      rc_a_stop_sent_ = false;
+      RCLCPP_INFO(this->get_logger(), "Cycle %d/%d: moving to B", cycle, repeat_count_);
+      rc_b_stop_monitoring_ = true;
+      rc_b_stop_sent_ = false;
       publish_rc_car_mode("follow");
-      go_path({"loading", "intersection_1", "a_entry", "a_leader_slot"});
-      rc_a_stop_monitoring_ = false;
-      if (handle_charger_parking_request()) {
-        return;
-      }
-      if (!rclcpp::ok()) {
-        return;
-      }
-      wait_stopped("A", 1.0);
+      go_path({"loading", "intersection_2", "b_entry", "b_leader_slot"});
+      rc_b_stop_monitoring_ = false;
       if (handle_charger_parking_request()) {
         return;
       }
@@ -437,18 +445,10 @@ public:
         return;
       }
       publish_rc_car_mode("stop");
-      wait_stopped("A", std::max(0.0, wait_seconds_ - 1.0));
-      rotate_to_face("a_entry");
-      if (handle_charger_parking_request()) {
-        return;
-      }
-      if (!rclcpp::ok()) {
-        return;
-      }
-      if (enable_a_slot_aruco_follow_) {
-        aruco_follow_after_leader_slot("a_leader_slot", "A");
-      } else {
-        wait_stopped("A leader slot", wait_seconds_);
+      wait_stopped("B leader slot", wait_seconds_);
+      rotate_to_face("b_entry");
+      if (enable_b_slot_aruco_follow_) {
+        aruco_follow_after_leader_slot("b_leader_slot", "B", b_slot_aruco_stop_distance_);
       }
       if (handle_charger_parking_request()) {
         return;
@@ -456,15 +456,13 @@ public:
       if (!rclcpp::ok()) {
         return;
       }
-      publish_rc_car_mode("stop");
-      hold_at_leader_slot("A leader slot");
+      hold_at_leader_slot("B leader slot");
       if (handle_charger_parking_request()) {
         return;
       }
     }
 
     publish_rc_car_mode("stop");
-    wait_for_charger_request();
   }
 
 private:
@@ -737,19 +735,21 @@ private:
 
   bool is_leader_slot(const std::string & node_name) const
   {
-    return node_name == "a_leader_slot";
+    return node_name == "b_leader_slot";
   }
 
   bool is_entry_node(const std::string & node_name) const
   {
-    return node_name == "a_entry";
+    return node_name == "b_entry";
   }
 
   bool is_skippable_node(const std::string & node_name, const MissionNode & node) const
   {
     if (
       node_name == "intersection_1" ||
-      node_name == "a_entry")
+      node_name == "intersection_2" ||
+      node_name == "a_entry" ||
+      node_name == "b_entry")
     {
       return true;
     }
@@ -759,7 +759,7 @@ private:
 
   bool is_blocking_target_node(const std::string & node_name) const
   {
-    return node_name == "a_leader_slot";
+    return node_name == "b_leader_slot";
   }
 
   geometry_msgs::msg::PoseStamped make_pose_stamped(double x, double y, double yaw) const
@@ -883,104 +883,6 @@ private:
     last_mppi_rescue_side_ = side;
     last_mppi_rescue_lateral_offset_ = std::abs(signed_lateral_offset);
     return path;
-  }
-
-  std::optional<nav_msgs::msg::Path> compute_charger_entry_path(
-    const RobotPose2D & pose,
-    const MissionNode & charger_entry,
-    double server_wait_seconds,
-    double timeout_seconds)
-  {
-    const auto wait_started_at = this->now();
-    rclcpp::Rate wait_rate(10.0);
-    while (
-      rclcpp::ok() &&
-      !compute_path_to_pose_client_->wait_for_action_server(0s) &&
-      (this->now() - wait_started_at).seconds() <= server_wait_seconds)
-    {
-      rclcpp::spin_some(this->get_node_base_interface());
-      publish_rc_car_mode("stop", true);
-      wait_rate.sleep();
-    }
-
-    if (!compute_path_to_pose_client_->wait_for_action_server(0s)) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "ComputePathToPose action server is not available for charger_entry");
-      return std::nullopt;
-    }
-
-    ComputePathToPose::Goal plan_goal;
-    plan_goal.start = make_pose_stamped(pose.x, pose.y, pose.yaw);
-    plan_goal.goal = make_pose_stamped(charger_entry.x, charger_entry.y, charger_entry.yaw);
-    plan_goal.use_start = true;
-
-    RCLCPP_WARN(
-      this->get_logger(),
-      "Computing Nav2 path to charger_entry: start=(%.3f, %.3f) goal=(%.3f, %.3f)",
-      pose.x,
-      pose.y,
-      charger_entry.x,
-      charger_entry.y);
-
-    auto goal_future = compute_path_to_pose_client_->async_send_goal(plan_goal);
-    while (
-      rclcpp::ok() &&
-      goal_future.wait_for(0ms) != std::future_status::ready)
-    {
-      rclcpp::spin_some(this->get_node_base_interface());
-      publish_rc_car_mode("stop", true);
-      rclcpp::sleep_for(50ms);
-    }
-
-    if (!rclcpp::ok()) {
-      return std::nullopt;
-    }
-
-    auto goal_handle = goal_future.get();
-    if (!goal_handle) {
-      RCLCPP_ERROR(this->get_logger(), "ComputePathToPose goal to charger_entry was rejected");
-      return std::nullopt;
-    }
-
-    auto result_future = compute_path_to_pose_client_->async_get_result(goal_handle);
-    const auto plan_started_at = this->now();
-    while (
-      rclcpp::ok() &&
-      result_future.wait_for(0ms) != std::future_status::ready)
-    {
-      rclcpp::spin_some(this->get_node_base_interface());
-      publish_rc_car_mode("stop", true);
-      if ((this->now() - plan_started_at).seconds() > timeout_seconds) {
-        RCLCPP_ERROR(
-          this->get_logger(),
-          "ComputePathToPose to charger_entry timed out after %.1f seconds",
-          timeout_seconds);
-        compute_path_to_pose_client_->async_cancel_goal(goal_handle);
-        return std::nullopt;
-      }
-      rclcpp::sleep_for(50ms);
-    }
-
-    if (!rclcpp::ok()) {
-      return std::nullopt;
-    }
-
-    const auto result = result_future.get();
-    if (result.code != rclcpp_action::ResultCode::SUCCEEDED || result.result->path.poses.empty()) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "ComputePathToPose to charger_entry failed with result code %d poses=%zu",
-        static_cast<int>(result.code),
-        result.result ? result.result->path.poses.size() : 0UL);
-      return std::nullopt;
-    }
-
-    RCLCPP_WARN(
-      this->get_logger(),
-      "Computed Nav2 path to charger_entry: poses=%zu",
-      result.result->path.poses.size());
-    return result.result->path;
   }
 
   double choose_mppi_rescue_side(
@@ -1287,14 +1189,18 @@ private:
     charger_parking_requested_ = false;
     charger_parking_active_ = true;
     charger_corridor_escape_attempts_ = 0;
-    rc_a_stop_monitoring_ = false;
-    rc_a_stop_sent_ = false;
+    rc_b_stop_monitoring_ = false;
+    rc_b_stop_sent_ = false;
     stop_current_action_for_charger_interrupt();
+    const bool charger_inflation_override_applied = apply_charger_nav2_inflation_override();
 
     RCLCPP_INFO(
       this->get_logger(),
-      "Navigating to charger_entry with planned MPPI FollowPath");
+      "Navigating to charger_entry with Nav2 NavigateToPose");
     const bool reached_charger_entry = navigate_to_charger_entry();
+    if (charger_inflation_override_applied) {
+      restore_charger_nav2_inflation();
+    }
     if (rclcpp::ok() && reached_charger_entry) {
       l_shaped_charger_parking("charger_front");
     } else if (rclcpp::ok()) {
@@ -1307,6 +1213,112 @@ private:
     charger_parking_active_ = false;
     RCLCPP_INFO(this->get_logger(), "Charger parking complete");
     return true;
+  }
+
+  bool apply_charger_nav2_inflation_override()
+  {
+    const auto node_name = this->get_parameter("charger_global_costmap_node").as_string();
+    const auto parameter_name =
+      this->get_parameter("charger_global_inflation_parameter").as_string();
+    const double override_radius =
+      this->get_parameter("charger_nav2_inflation_radius").as_double();
+    const double timeout_seconds = std::max(
+      0.1,
+      this->get_parameter("charger_nav2_parameter_timeout_seconds").as_double());
+
+    auto client = std::make_shared<rclcpp::SyncParametersClient>(this, node_name);
+    if (!client->wait_for_service(std::chrono::duration<double>(timeout_seconds))) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Could not apply charger Nav2 inflation override: parameter service %s unavailable",
+        node_name.c_str());
+      return false;
+    }
+
+    try {
+      charger_nav2_inflation_restore_value_ = client->get_parameter<double>(parameter_name);
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Could not read charger Nav2 inflation parameter %s/%s: %s",
+        node_name.c_str(),
+        parameter_name.c_str(),
+        e.what());
+      charger_nav2_inflation_restore_value_.reset();
+      return false;
+    }
+
+    const auto results = client->set_parameters(
+      {rclcpp::Parameter(parameter_name, override_radius)});
+    if (results.empty() || !results.front().successful) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Could not set charger Nav2 inflation parameter %s/%s to %.3f: %s",
+        node_name.c_str(),
+        parameter_name.c_str(),
+        override_radius,
+        results.empty() ? "no result" : results.front().reason.c_str());
+      charger_nav2_inflation_restore_value_.reset();
+      return false;
+    }
+
+    charger_nav2_inflation_override_active_ = true;
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Applied charger-only Nav2 inflation override: %s/%s %.3f -> %.3f",
+      node_name.c_str(),
+      parameter_name.c_str(),
+      *charger_nav2_inflation_restore_value_,
+      override_radius);
+    return true;
+  }
+
+  void restore_charger_nav2_inflation()
+  {
+    if (!charger_nav2_inflation_override_active_ ||
+      !charger_nav2_inflation_restore_value_.has_value())
+    {
+      return;
+    }
+
+    const auto node_name = this->get_parameter("charger_global_costmap_node").as_string();
+    const auto parameter_name =
+      this->get_parameter("charger_global_inflation_parameter").as_string();
+    const double timeout_seconds = std::max(
+      0.1,
+      this->get_parameter("charger_nav2_parameter_timeout_seconds").as_double());
+    const double restore_radius = *charger_nav2_inflation_restore_value_;
+
+    auto client = std::make_shared<rclcpp::SyncParametersClient>(this, node_name);
+    if (!client->wait_for_service(std::chrono::duration<double>(timeout_seconds))) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Failed to restore charger Nav2 inflation: parameter service %s unavailable",
+        node_name.c_str());
+      return;
+    }
+
+    const auto results = client->set_parameters(
+      {rclcpp::Parameter(parameter_name, restore_radius)});
+    if (results.empty() || !results.front().successful) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Failed to restore charger Nav2 inflation parameter %s/%s to %.3f: %s",
+        node_name.c_str(),
+        parameter_name.c_str(),
+        restore_radius,
+        results.empty() ? "no result" : results.front().reason.c_str());
+      return;
+    }
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Restored charger-only Nav2 inflation override: %s/%s -> %.3f",
+      node_name.c_str(),
+      parameter_name.c_str(),
+      restore_radius);
+    charger_nav2_inflation_override_active_ = false;
+    charger_nav2_inflation_restore_value_.reset();
   }
 
   bool navigate_to_charger_entry()
@@ -1337,7 +1349,7 @@ private:
     rclcpp::Rate wait_rate(10.0);
     while (
       rclcpp::ok() &&
-      !mppi_follow_path_client_->wait_for_action_server(0s) &&
+      !navigate_to_pose_client_->wait_for_action_server(0s) &&
       (this->now() - wait_started_at).seconds() <= server_wait_seconds)
     {
       rclcpp::spin_some(this->get_node_base_interface());
@@ -1345,47 +1357,30 @@ private:
       wait_rate.sleep();
     }
 
-    if (!mppi_follow_path_client_->wait_for_action_server(0s)) {
+    if (!navigate_to_pose_client_->wait_for_action_server(0s)) {
       RCLCPP_ERROR(
         this->get_logger(),
-        "FollowPath action server is not available for charger_entry");
+        "NavigateToPose action server is not available");
       return false;
     }
 
     const auto & charger_entry = node_it->second;
-    const auto pose = lookup_robot_pose();
-    if (!pose.has_value()) {
-      RCLCPP_ERROR(this->get_logger(), "Cannot create charger FollowPath: robot pose unavailable");
-      return false;
-    }
-    if (is_near_charger_entry(charger_entry, "before FollowPath")) {
+    if (is_near_charger_entry(charger_entry, "before NavigateToPose")) {
       stop();
       return true;
     }
 
-    auto planned_path = compute_charger_entry_path(
-      pose.value(),
-      charger_entry,
-      server_wait_seconds,
-      timeout_seconds);
-    if (!planned_path.has_value()) {
-      return is_near_charger_entry(charger_entry, "after path planning failure");
-    }
-
-    FollowPath::Goal goal;
-    goal.path = planned_path.value();
-    goal.controller_id = "FollowPath";
-    goal.goal_checker_id = "general_goal_checker";
+    NavigateToPose::Goal goal;
+    goal.pose = make_pose_stamped(charger_entry.x, charger_entry.y, charger_entry.yaw);
 
     RCLCPP_WARN(
       this->get_logger(),
-      "Sending planned MPPI FollowPath to charger_entry: x=%.3f y=%.3f yaw=%.2f poses=%zu",
+      "Sending NavigateToPose goal to charger_entry: x=%.3f y=%.3f yaw=%.2f",
       charger_entry.x,
       charger_entry.y,
-      charger_entry.yaw,
-      goal.path.poses.size());
+      charger_entry.yaw);
 
-    auto goal_future = mppi_follow_path_client_->async_send_goal(goal);
+    auto goal_future = navigate_to_pose_client_->async_send_goal(goal);
     while (
       rclcpp::ok() &&
       goal_future.wait_for(0ms) != std::future_status::ready)
@@ -1401,11 +1396,11 @@ private:
 
     auto goal_handle = goal_future.get();
     if (!goal_handle) {
-      RCLCPP_ERROR(this->get_logger(), "FollowPath goal to charger_entry was rejected");
+      RCLCPP_ERROR(this->get_logger(), "NavigateToPose goal was rejected");
       return false;
     }
 
-    auto result_future = mppi_follow_path_client_->async_get_result(goal_handle);
+    auto result_future = navigate_to_pose_client_->async_get_result(goal_handle);
     const auto nav_started_at = this->now();
     auto last_progress_pose = lookup_robot_pose();
     auto last_progress_at = this->now();
@@ -1422,8 +1417,8 @@ private:
         if (charger_fast_handoff_reached(charger_entry)) {
           RCLCPP_INFO(
             this->get_logger(),
-            "Fast handoff at charger_entry; canceling FollowPath for L-shaped parking");
-          mppi_follow_path_client_->async_cancel_goal(goal_handle);
+            "Fast handoff at charger_entry; canceling NavigateToPose for L-shaped parking");
+          navigate_to_pose_client_->async_cancel_goal(goal_handle);
           stop();
           return true;
         }
@@ -1449,8 +1444,8 @@ private:
             {
               RCLCPP_WARN(
                 this->get_logger(),
-                "Canceling FollowPath after charger_entry hold for L-shaped parking");
-              mppi_follow_path_client_->async_cancel_goal(goal_handle);
+                "Canceling NavigateToPose after charger_entry hold for L-shaped parking");
+              navigate_to_pose_client_->async_cancel_goal(goal_handle);
               stop();
               return true;
             }
@@ -1472,10 +1467,10 @@ private:
           if (std::isfinite(front_min) && front_min < stuck_front_clearance) {
             RCLCPP_ERROR(
               this->get_logger(),
-              "FollowPath appears stuck near obstacle: moved < %.3fm for %.1fs, front=%.3f. Starting charger corridor escape immediately.",
+              "NavigateToPose appears stuck near obstacle: moved < %.3fm for %.1fs, front=%.3f. Starting charger corridor escape immediately.",
               stuck_distance, stuck_seconds, front_min);
-            mppi_follow_path_client_->async_cancel_goal(goal_handle);
-            if (try_charger_corridor_escape(charger_entry, "after FollowPath stuck watchdog")) {
+            navigate_to_pose_client_->async_cancel_goal(goal_handle);
+            if (try_charger_corridor_escape(charger_entry, "after NavigateToPose stuck watchdog")) {
               return navigate_to_charger_entry();
             }
             return false;
@@ -1485,14 +1480,14 @@ private:
       if ((this->now() - nav_started_at).seconds() > timeout_seconds) {
         RCLCPP_ERROR(
           this->get_logger(),
-          "FollowPath to charger_entry timed out after %.1f seconds",
+          "NavigateToPose timed out after %.1f seconds",
           timeout_seconds);
-        mppi_follow_path_client_->async_cancel_goal(goal_handle);
-        if (is_near_charger_entry(charger_entry, "after FollowPath timeout")) {
+        navigate_to_pose_client_->async_cancel_goal(goal_handle);
+        if (is_near_charger_entry(charger_entry, "after NavigateToPose timeout")) {
           stop();
           return true;
         }
-        if (try_charger_corridor_escape(charger_entry, "after FollowPath timeout")) {
+        if (try_charger_corridor_escape(charger_entry, "after NavigateToPose timeout")) {
           return navigate_to_charger_entry();
         }
         return false;
@@ -1508,20 +1503,20 @@ private:
     if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
       RCLCPP_ERROR(
         this->get_logger(),
-        "FollowPath to charger_entry failed with result code %d",
+        "NavigateToPose failed with result code %d",
         static_cast<int>(result.code));
-      if (is_near_charger_entry(charger_entry, "after FollowPath failure")) {
+      if (is_near_charger_entry(charger_entry, "after NavigateToPose failure")) {
         stop();
         return true;
       }
-      if (try_charger_corridor_escape(charger_entry, "after FollowPath failure")) {
+      if (try_charger_corridor_escape(charger_entry, "after NavigateToPose failure")) {
         return navigate_to_charger_entry();
       }
       return false;
     }
 
     stop();
-    RCLCPP_INFO(this->get_logger(), "Reached charger_entry with planned MPPI FollowPath");
+    RCLCPP_INFO(this->get_logger(), "Reached charger_entry with Nav2");
     return true;
   }
 
@@ -1532,18 +1527,18 @@ private:
 
   void handle_rc_car_odom(const nav_msgs::msg::Odometry::SharedPtr msg)
   {
-    if (rc_a_stop_monitoring_ && !rc_a_stop_sent_) {
-      const double dx = msg->pose.pose.position.x - rc_a_stop_x_;
-      const double dy = msg->pose.pose.position.y - rc_a_stop_y_;
+    if (rc_b_stop_monitoring_ && !rc_b_stop_sent_) {
+      const double dx = msg->pose.pose.position.x - rc_b_stop_x_;
+      const double dy = msg->pose.pose.position.y - rc_b_stop_y_;
       const double distance = std::hypot(dx, dy);
-      if (distance <= rc_a_stop_tolerance_) {
-        rc_a_stop_sent_ = true;
+      if (distance <= rc_b_stop_tolerance_) {
+        rc_b_stop_sent_ = true;
         publish_rc_car_mode("stop");
         RCLCPP_INFO(
           this->get_logger(),
-          "RC car reached rc_a_stop: distance=%.3f tolerance=%.3f; stopping RC car",
+          "RC car reached rc_b_stop: distance=%.3f tolerance=%.3f; stopping RC car",
           distance,
-          rc_a_stop_tolerance_);
+          rc_b_stop_tolerance_);
       }
     }
 
@@ -2124,7 +2119,8 @@ private:
 
   void aruco_follow_after_leader_slot(
     const std::string & leader_slot_name,
-    const std::string & slot_label)
+    const std::string & slot_label,
+    double stop_distance)
   {
     RCLCPP_INFO(
       this->get_logger(),
@@ -2171,12 +2167,14 @@ private:
 
       const auto target = last_aruco_target_.value();
       const double distance = target.point.y;
-      if (distance <= aruco_stop_distance_) {
+      if (distance <= stop_distance) {
         stop();
         RCLCPP_INFO(
           this->get_logger(),
-          "Reached RC car ArUco stop distance %.2fm. Stopping and disabling ArUco detection",
-          distance);
+          "Reached %s ArUco stop distance %.2fm <= %.2fm. Stopping and disabling ArUco detection",
+          slot_label.c_str(),
+          distance,
+          stop_distance);
         set_aruco_detection_enabled(false);
         rotate_to_node_yaw(leader_slot_name);
         if (charger_parking_interrupt_requested()) {
@@ -2198,10 +2196,6 @@ private:
         }
         stop();
         publish_rc_car_mode("stop");
-        rclcpp::sleep_for(1s);
-        set_aruco_detection_enabled(false);
-        rclcpp::sleep_for(200ms);
-        publish_arm_mission_start();
         RCLCPP_INFO(
           this->get_logger(),
           "First ArUco mission complete after 180 degree turn and 7.5cm backward move; stopping");
@@ -2603,6 +2597,7 @@ private:
       mode == "slot_wait_a" ||
       mode == "turn_ccw_90" ||
       mode == "turn_cw_90" ||
+      mode == "align_b_stop_yaw" ||
       mode == "drive_to_post_aruco_target")
     {
       last_rc_car_slot_status_.clear();
@@ -2612,14 +2607,6 @@ private:
     msg.data = mode;
     rc_car_mode_pub_->publish(msg);
     last_rc_car_mode_ = mode;
-  }
-
-  void publish_arm_mission_start()
-  {
-    std_msgs::msg::String msg;
-    msg.data = "start";
-    arm_mission_start_pub_->publish(msg);
-    RCLCPP_INFO(this->get_logger(), "Published A_mission_start after final backward move");
   }
 
   void schedule_rc_car_mode(const std::string & mode, double delay_seconds)
@@ -2701,9 +2688,9 @@ private:
   double yaw_tolerance_{0.08};
   bool stop_rc_car_on_a_leader_slot_ccw_yaw_{false};
   double rc_car_a_slot_stop_yaw_delta_{M_PI / 3.0};
-  double rc_a_stop_x_{0.573159396648407};
-  double rc_a_stop_y_{-0.003990175202488899};
-  double rc_a_stop_tolerance_{0.12};
+  double rc_b_stop_x_{0.7269076704978943};
+  double rc_b_stop_y_{-1.4004881381988525};
+  double rc_b_stop_tolerance_{0.12};
   double max_linear_speed_{0.14};
   double max_angular_speed_{0.45};
   double linear_gain_{0.70};
@@ -2747,10 +2734,13 @@ private:
   double corridor_hard_stop_width_{0.40};
   double corridor_max_lateral_offset_{0.24};
   bool enable_a_slot_aruco_follow_{true};
+  bool enable_b_slot_aruco_follow_{true};
   double aruco_search_angular_speed_{0.18};
   double aruco_approach_linear_speed_{0.045};
   double aruco_approach_angular_gain_{0.40};
   double aruco_stop_distance_{0.28};
+  double b_slot_aruco_stop_distance_{0.36};
+  double b_slot_aruco_final_yaw_{M_PI_2};
   double aruco_detection_timeout_seconds_{0.6};
   bool enable_lidar_safety_{true};
   bool enable_mppi_rescue_{true};
@@ -2760,8 +2750,10 @@ private:
   bool mppi_side_escape_active_{false};
   bool charger_parking_requested_{false};
   bool charger_parking_active_{false};
-  bool rc_a_stop_monitoring_{false};
-  bool rc_a_stop_sent_{false};
+  bool charger_nav2_inflation_override_active_{false};
+  std::optional<double> charger_nav2_inflation_restore_value_;
+  bool rc_b_stop_monitoring_{false};
+  bool rc_b_stop_sent_{false};
   std::optional<std::string> scheduled_rc_car_mode_;
   rclcpp::Time scheduled_rc_car_mode_at_{0, 0, RCL_ROS_TIME};
   std::string last_rc_car_mode_;
@@ -2771,7 +2763,6 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr rc_car_mode_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr aruco_enable_pub_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr arm_mission_start_pub_;
   rclcpp::TimerBase::SharedPtr rc_car_mode_timer_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr rc_car_slot_status_sub_;
@@ -2779,8 +2770,8 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr aruco_target_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
-  rclcpp_action::Client<ComputePathToPose>::SharedPtr compute_path_to_pose_client_;
   rclcpp_action::Client<FollowPath>::SharedPtr mppi_follow_path_client_;
+  rclcpp_action::Client<NavigateToPose>::SharedPtr navigate_to_pose_client_;
   FollowPathGoalHandle::SharedPtr mppi_goal_handle_;
   rclcpp::Time mppi_rescue_started_at_{0, 0, RCL_ROS_TIME};
   rclcpp::Time mppi_stop_and_plan_started_at_{0, 0, RCL_ROS_TIME};

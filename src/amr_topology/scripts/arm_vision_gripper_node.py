@@ -118,8 +118,11 @@ class ArmVisionGripper(Node):
         self.declare_parameter("servo_angle_topic", "/arm_servo_angles")
         self.declare_parameter("status_topic", "/arm_vision_status")
         self.declare_parameter("command_topic", "/arm_vision_command")
+        self.declare_parameter("mission_start_topic", "A_mission_start")
+        self.declare_parameter("mission_finish_topic", "A_mission_finish")
+        self.declare_parameter("mission_finish_no_detection_sec", 5.0)
         self.declare_parameter("timer_period_sec", 0.03)
-        self.declare_parameter("control_interval_sec", 0.35)
+        self.declare_parameter("control_interval_sec", 0.25)
         self.declare_parameter("center_tolerance_u", 30.0)
         self.declare_parameter("center_tolerance_v", 30.0)
         self.declare_parameter("auto_align_hold_sec", 3.0)
@@ -151,6 +154,9 @@ class ArmVisionGripper(Node):
         self.grip_target_z_mm = float(self.get_parameter("grip_target_z_mm").value)
         self.auto_start_enabled = bool(self.get_parameter("auto_start_enabled").value)
         self.auto_start_delay_sec = float(self.get_parameter("auto_start_delay_sec").value)
+        self.mission_finish_no_detection_sec = float(
+            self.get_parameter("mission_finish_no_detection_sec").value
+        )
         self.servo_republish_interval_sec = float(
             self.get_parameter("servo_republish_interval_sec").value
         )
@@ -159,12 +165,16 @@ class ArmVisionGripper(Node):
         self.center_tolerance_v = float(self.get_parameter("center_tolerance_v").value)
 
         self.s0_step = 1.0
-        self.v_step = 2.0
+        self.s0_min_step = 0.1
+        self.s0_error_gain = 0.014
+        self.v_step = 1.0
         self.s1_weight = 0.70
         self.s2_weight = 0.30
         self.v_direction = 1.0
 
-        self.error_v_filter_alpha = 0.25
+        self.error_v_filter_alpha = 0.18
+        self.error_u_filter_alpha = 0.25
+        self.filtered_error_u = 0.0
         self.filtered_error_v = 0.0
 
         self.d1_mm = 110.0
@@ -173,20 +183,21 @@ class ArmVisionGripper(Node):
         self.base_to_link1_z_mm = 25.0
         self.link2_angle_at_90_deg = 30.25643716
         self.link3_offset_deg = 59.74356284
-        self.ik_approach_r_step_mm = 0.6
+        self.ik_approach_r_step_mm = 0.8
         self.ik_approach_z_step_mm = 0.4
         self.ik_wrist_from_image_gain = 0.012
         self.ik_wrist_step_limit_deg = 0.7
 
-        self.start_pose = [38.0, 70.0, 90.0, 15.0, 50.0]
+        self.start_pose = [45.0, 70.0, 90.0, 10.0, 140.0]
         self.drop_pose = [130.0, 120.0, 80.0, 90.0, 50.0]
         self.gripper_open_angle = 140.0
         self.gripper_close_angle = 90.0
-        self.insert_final_s1_offset_deg = 24.0
-        self.insert_final_s2_offset_deg = -25.0
-        self.insert_final_s3_offset_deg = 20.0
+        self.insert_final_s1_offset_deg = 40.0
+        self.insert_final_s2_offset_deg = -60.0
+        self.insert_final_s3_offset_deg = -10.0
         self.gripper_open_wait_sec = 5.0
         self.insert_joint_step_wait_sec = 2.0
+        self.gripper_close_after_wait_sec = 4.0
         self.gripper_close_before_wait_sec = 5.0
         self.return_to_start_delay_sec = 1.0
 
@@ -206,16 +217,23 @@ class ArmVisionGripper(Node):
         self.track_match_max_distance_px = 180.0
         self.track_max_missed_frames = 8
         self.search_pose_enter_time = time.monotonic()
+        self.no_detection_start_time = None
+        self.mission_active = False
+        self.mission_finish_published = False
         self.last_servo_publish_time = 0.0
 
         servo_angle_topic = self.get_parameter("servo_angle_topic").value
         status_topic = self.get_parameter("status_topic").value
         command_topic = self.get_parameter("command_topic").value
+        mission_start_topic = self.get_parameter("mission_start_topic").value
+        mission_finish_topic = self.get_parameter("mission_finish_topic").value
         self.camera_backend = self.get_parameter("camera_backend").value
 
         self.servo_pub = self.create_publisher(Int32MultiArray, servo_angle_topic, 10)
         self.status_pub = self.create_publisher(String, status_topic, 10)
+        self.mission_finish_pub = self.create_publisher(String, mission_finish_topic, 10)
         self.create_subscription(String, command_topic, self.handle_command, 10)
+        self.create_subscription(String, mission_start_topic, self.handle_mission_start, 10)
 
         self.camera = None
         self.configure_frame_source()
@@ -310,6 +328,22 @@ class ArmVisionGripper(Node):
         else:
             self.get_logger().warn(f"unknown arm vision command: {msg.data}")
 
+    def handle_mission_start(self, msg):
+        command = msg.data.strip().lower()
+        if command in ("0", "false", "off", "stop"):
+            self.stop_auto()
+            self.auto_start_enabled = False
+            self.mission_active = False
+            return
+
+        self.auto_start_enabled = True
+        self.mission_active = True
+        self.mission_finish_published = False
+        self.no_detection_start_time = None
+        self.approach_stop_latched = False
+        self.search_pose_enter_time = time.monotonic() - self.auto_start_delay_sec
+        self.publish_status(f"mission start received on {msg.data}")
+
     def timer_step(self):
         if self.sequence_running:
             return
@@ -329,6 +363,12 @@ class ArmVisionGripper(Node):
                     self.last_waiting_frame_log = now
                 return
             frame = self.latest_frame.copy()
+
+        if self.waiting_for_start_pose_settle(now):
+            if self.display:
+                cv2.imshow("arm_vision_camera", frame)
+                cv2.waitKey(1)
+            return
 
         result, output, mask = self.detect_colored_cube(frame)
 
@@ -362,6 +402,8 @@ class ArmVisionGripper(Node):
                 self.publish_status("auto not started: no target detected")
 
     def process_detection(self, result, now, output):
+        self.no_detection_start_time = None
+
         error_u = result["error_u"]
         error_v = result["error_v"]
         distance_mm = result["distance_mm"]
@@ -372,7 +414,10 @@ class ArmVisionGripper(Node):
             self.error_v_filter_alpha * error_v
             + (1.0 - self.error_v_filter_alpha) * self.filtered_error_v
         )
-
+        self.filtered_error_u = (
+            self.error_u_filter_alpha * error_u
+            + (1.0 - self.error_u_filter_alpha) * self.filtered_error_u
+        )
         if self.should_auto_start(now):
             self.start_auto(result, reason="auto start after search-pose delay")
 
@@ -386,7 +431,7 @@ class ArmVisionGripper(Node):
             aligned_v = True
         elif self.auto_approach:
             self.target_lock = (result["object_u"], result["object_v"])
-            self.s0, aligned_u = self.update_s0_by_error(error_u, self.s0)
+            self.s0, aligned_u = self.update_s0_by_error(self.filtered_error_u, self.s0)
 
             if not self.approach_released:
                 self.s1, self.s2, self.s3, aligned_v = self.update_s12_by_error(
@@ -428,12 +473,72 @@ class ArmVisionGripper(Node):
             )
 
         if approach_done and not self.approach_stop_latched:
-            self.publish_status("approach done; holding before grip sequence")
-            self.approach_stop_latched = True
+            self.publish_status("approach done; moving s3")
+            self.s3 = clamp(self.s3 + self.insert_final_s3_offset_deg, 0, 180)
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("approach done; moving s2")
+            self.s2 = clamp(self.s2 + self.insert_final_s2_offset_deg, 0, 180)
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("approach done; moving s1")
+            self.s1 = clamp(self.s1 + self.insert_final_s1_offset_deg, 0, 180)
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("approach done; closing gripper")
+            self.gripper = 40.0
+            self.publish_angles(self.current_pose())
+            time.sleep(self.gripper_close_after_wait_sec)
+            self.publish_status("approach done; returning to start pose")
+            self.s1 = self.start_pose[1]
+            self.publish_angles(self.current_pose())
+            time.sleep(self.return_to_start_delay_sec)
+            self.s0 = self.start_pose[0]
+            self.s2 = self.start_pose[2]
+            self.s3 = self.start_pose[3]
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("placing object; moving s0 to drop side")
+            self.s0 = 120.0
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("placing object; moving arm to drop pose")
+            self.s1 = 140.0
+            self.s2 = 50.0
+            self.s3 = 40.0
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("placing object; opening gripper")
+            self.gripper = 140.0
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("placing object; lifting s1 before side return")
+            self.s1 = 70.0
+            self.publish_angles(self.current_pose())
+            time.sleep(self.return_to_start_delay_sec)
+            self.publish_status("placing object; returning via side pose")
+            self.s0 = 120.0
+            self.s2 = 90.0
+            self.s3 = 10.0
+            self.gripper = 140.0
+            self.publish_angles(self.current_pose())
+            time.sleep(self.insert_joint_step_wait_sec)
+            self.publish_status("placing object; returning to start pose")
+            self.s0, self.s1, self.s2, self.s3, self.gripper = self.start_pose
+            self.publish_angles(self.current_pose())
+            self.approach_stop_latched = False
             self.auto_approach = False
             self.target_lock = None
+            self.object_tracks = {}
+            self.next_track_number = 1
             self.align_hold_start = None
             self.approach_released = False
+            self.filtered_error_u = 0.0
+            self.filtered_error_v = 0.0
+            self.search_pose_enter_time = time.monotonic()
+            self.publish_status(
+                f"cycle complete; waiting {self.auto_start_delay_sec:.1f}s in search pose"
+            )
             self.last_control_time = now
             return
 
@@ -446,6 +551,8 @@ class ArmVisionGripper(Node):
     def process_missing_detection(self, now, output):
         if self.auto_approach:
             self.align_hold_start = None
+
+        self.update_no_detection_finish(now)
 
         cv2.putText(
             output,
@@ -482,7 +589,7 @@ class ArmVisionGripper(Node):
                 continue
 
             object_u = x + w / 2.0
-            object_v = y + h / 3.0
+            object_v = y + h / 2.0
             candidates.append(
                 {
                     "object_u": object_u,
@@ -800,10 +907,11 @@ class ArmVisionGripper(Node):
         if abs(error_u) <= self.center_tolerance_u:
             return current_s0, True
 
+        step = clamp(abs(error_u) * self.s0_error_gain, self.s0_min_step, self.s0_step)
         if error_u > 0:
-            current_s0 -= self.s0_step
+            current_s0 -= step
         else:
-            current_s0 += self.s0_step
+            current_s0 += step
 
         return clamp(current_s0, 0, 180), False
 
@@ -965,6 +1073,15 @@ class ArmVisionGripper(Node):
             and now - self.search_pose_enter_time >= self.auto_start_delay_sec
         )
 
+    def waiting_for_start_pose_settle(self, now):
+        return (
+            self.auto_start_enabled
+            and not self.auto_approach
+            and not self.sequence_running
+            and not self.approach_stop_latched
+            and now - self.search_pose_enter_time < self.auto_start_delay_sec
+        )
+
     def start_auto(self, result=None, reason="auto approach on"):
         if result is not None:
             self.target_lock = (result["object_u"], result["object_v"])
@@ -1034,6 +1151,35 @@ class ArmVisionGripper(Node):
         msg.data = text
         self.status_pub.publish(msg)
         self.get_logger().info(text)
+
+    def update_no_detection_finish(self, now):
+        if not self.mission_active or self.mission_finish_published:
+            self.no_detection_start_time = None
+            return
+
+        if self.auto_approach or self.approach_released:
+            self.no_detection_start_time = None
+            return
+
+        if self.no_detection_start_time is None:
+            self.no_detection_start_time = now
+            return
+
+        if now - self.no_detection_start_time < self.mission_finish_no_detection_sec:
+            return
+
+        msg = String()
+        msg.data = "finish"
+        self.mission_finish_pub.publish(msg)
+        self.publish_status(
+            f"mission finish: no target detected for {self.mission_finish_no_detection_sec:.1f}s"
+        )
+        self.mission_finish_published = True
+        self.mission_active = False
+        self.auto_start_enabled = False
+        self.auto_approach = False
+        self.target_lock = None
+        self.no_detection_start_time = None
 
     @staticmethod
     def pose_changed(old_pose, new_pose):

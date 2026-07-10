@@ -13,6 +13,7 @@ def generate_launch_description():
     cmd_vel_topic = LaunchConfiguration("cmd_vel_topic")
     scan_topic = LaunchConfiguration("scan_topic")
     map_topic = LaunchConfiguration("map_topic")
+    mission_loop_params = LaunchConfiguration("mission_loop_params")
 
     aruco_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -32,6 +33,7 @@ def generate_launch_description():
         name="mission_loop",
         output="screen",
         parameters=[
+            mission_loop_params,
             {
                 "topology_file": topology_file,
                 "map_frame": map_frame,
@@ -60,6 +62,16 @@ def generate_launch_description():
             DeclareLaunchArgument("cmd_vel_topic", default_value="/cmd_vel"),
             DeclareLaunchArgument("scan_topic", default_value="/scan"),
             DeclareLaunchArgument("map_topic", default_value="/map"),
+            DeclareLaunchArgument(
+                "mission_loop_params",
+                default_value=PathJoinSubstitution(
+                    [
+                        FindPackageShare("amr_topology"),
+                        "config",
+                        "mission_loop.yaml",
+                    ]
+                ),
+            ),
             aruco_launch,
             mission_loop,
         ]

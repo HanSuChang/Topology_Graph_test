@@ -19,6 +19,9 @@ def generate_launch_description():
     jpeg_quality = LaunchConfiguration("jpeg_quality")
     auto_start_enabled = LaunchConfiguration("auto_start_enabled")
     auto_start_delay_sec = LaunchConfiguration("auto_start_delay_sec")
+    mission_start_topic = LaunchConfiguration("mission_start_topic")
+    mission_finish_topic = LaunchConfiguration("mission_finish_topic")
+    mission_finish_no_detection_sec = LaunchConfiguration("mission_finish_no_detection_sec")
     distance_correction_scale = LaunchConfiguration("distance_correction_scale")
     approach_done_distance_mm = LaunchConfiguration("approach_done_distance_mm")
     enable_serial_bridge = LaunchConfiguration("enable_serial_bridge")
@@ -39,8 +42,11 @@ def generate_launch_description():
             DeclareLaunchArgument("picam_input_topic", default_value="/picam/image_raw"),
             DeclareLaunchArgument("rotation_degrees", default_value="90"),
             DeclareLaunchArgument("jpeg_quality", default_value="70"),
-            DeclareLaunchArgument("auto_start_enabled", default_value="true"),
+            DeclareLaunchArgument("auto_start_enabled", default_value="false"),
             DeclareLaunchArgument("auto_start_delay_sec", default_value="5.0"),
+            DeclareLaunchArgument("mission_start_topic", default_value="A_mission_start"),
+            DeclareLaunchArgument("mission_finish_topic", default_value="A_mission_finish"),
+            DeclareLaunchArgument("mission_finish_no_detection_sec", default_value="5.0"),
             DeclareLaunchArgument("distance_correction_scale", default_value="2.17647"),
             DeclareLaunchArgument("approach_done_distance_mm", default_value="50.0"),
             DeclareLaunchArgument("enable_serial_bridge", default_value="false"),
@@ -123,6 +129,12 @@ def generate_launch_description():
                         "servo_angle_topic": "/arm_servo_angles",
                         "status_topic": "/arm_vision_status",
                         "command_topic": "/arm_vision_command",
+                        "mission_start_topic": mission_start_topic,
+                        "mission_finish_topic": mission_finish_topic,
+                        "mission_finish_no_detection_sec": ParameterValue(
+                            mission_finish_no_detection_sec,
+                            value_type=float,
+                        ),
                     }
                 ],
             ),
