@@ -1,0 +1,30 @@
+backend/gui_main
+backend/vendor/
+
+frontend/node_modules/
+frontend/dist/
+frontend/dist-node/
+frontend/.vite/
+frontend/*.tsbuildinfo
+
+bridge/**/__pycache__/
+bridge/**/*.pyc
+
+# Audit JSONL and runtime logs
+backend/logs/*.jsonl
+backend/logs/*.log
+logs/
+
+# SQLite WAL + backups
+backup/sqlite_backup/*.db
+backup/sqlite_backup/*.db-wal
+backup/sqlite_backup/*.db-shm
+
+build/
+install/
+log/
+
+.vscode/
+.idea/
+*.swp
+.DS_Store

@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+
+/* OS·브라우저 간 글자/요소 크기 일관성 보정.
+   - html font-size 16px 고정: Chrome의 사용자 정의 기본 글꼴 크기(작게/보통/크게)나
+     일부 환경에서 16px가 아닌 root rem이 잡히는 경우를 방지. Tailwind의 text-sm/base/lg는
+     전부 rem 기반이라 root만 잡으면 전체 타이포가 픽셀 단위로 동일하게 정렬됨.
+   - text-size-adjust 100%: 모바일 사파리/일부 안드로이드 Chrome의 자동 폰트 확대 차단.
+   - antialiased + grayscale: 윈도우 ClearType이 같은 14px를 더 굵게/크게 보이게 만드는
+     서브픽셀 효과를 끄고, macOS/Linux와 동일한 회색조 안티에일리어싱으로 통일.
+   - tabular-nums: 좌표/배터리%/속도 등 숫자 글리프 폭을 모든 OS에서 동일하게 — 자릿수
+     변경 시 카드 폭이 흔들리지 않음.
+   ※ 윈도우 디스플레이 배율(125%/150%)이 적용된 경우 글자가 실제로 더 크게 보이는 건
+     CSS로 무력화 불가 — 그 경우 운영자가 Chrome 줌(Ctrl + -)으로 80%/67%로 맞춰야 한다. */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: "Pretendard", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+  color: theme(colors.ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+  background:
+    radial-gradient(circle at 0% 0%, #e0f2fe 0%, transparent 45%),
+    radial-gradient(circle at 100% 0%, #ede9fe 0%, transparent 45%),
+    radial-gradient(circle at 50% 100%, #cffafe 0%, transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  background-attachment: fixed;
+}
+
+/* Reusable glass surface — composed in components via @apply or class lists.
+   `backdrop-filter` is GPU-paint heavy: every state change that triggers
+   a repaint forces the browser to re-blur every glass card. We use
+   CSS `contain: layout paint style` to confine each card's repaint to
+   its own box so a click on one card doesn't ripple into a cascade of
+   re-blurs across the whole dashboard. Mobile drops blur entirely
+   (lower-end GPUs); desktop keeps a small 4px blur for the look. */
+.glass {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  contain: layout paint style;
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  contain: layout paint style;
+}
+
+@media (min-width: 1024px) {
+  .glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(4px) saturate(115%);
+    -webkit-backdrop-filter: blur(4px) saturate(115%);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+  }
+}
+
+/* Subtle inset scrollbar in light theme. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.3); }
+::-webkit-scrollbar-track { background: transparent; }

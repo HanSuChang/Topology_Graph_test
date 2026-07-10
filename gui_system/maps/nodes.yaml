@@ -1,0 +1,173 @@
+# 이 파일은 Topology_Graph_test-main/src/amr_topology/config/topology.yaml
+# 기준으로 동기화한 GUI용 토폴로지다. 주행 코드 topology의 yaw는 theta로,
+# bidirectional edge는 direction: two_way로 변환한다.
+
+nodes:
+  - id: loading
+    name: "상차 구역"
+    x: 2.4713807106018066
+    y: -2.628671169281006
+    theta: 1.57
+    type: loading_zone
+    enabled: true
+
+  - id: intersection_1
+    name: "교차로 1"
+    x: 2.442805051803589
+    y: -0.015692830085754395
+    theta: 0.0
+    type: intersection
+    enabled: true
+
+  - id: a_entry
+    name: "A 진입"
+    x: 1.2001334428787231
+    y: -0.001835942268371582
+    theta: 0.0
+    type: area_entry
+    enabled: true
+
+  - id: a_leader_slot
+    name: "A 구역"
+    x: -0.06747579574584961
+    y: 0.007548093795776367
+    theta: 0.0
+    type: stationing_slot
+    enabled: true
+
+  - id: intersection_2
+    name: "교차로 2"
+    x: 2.478525400161743
+    y: -1.389811635017395
+    theta: 0.0
+    type: intersection
+    enabled: true
+
+  - id: b_entry
+    name: "B 진입"
+    x: 1.209195852279663
+    y: -1.3838512897491455
+    theta: 0.0
+    type: area_entry
+    enabled: true
+
+  - id: b_leader_slot
+    name: "B 구역"
+    x: 0.01311033871024847
+    y: -1.3952621221542358
+    theta: 0.0
+    type: stationing_slot
+    enabled: true
+
+  - id: charger_front
+    name: "충전소"
+    x: 0.10498535633087158
+    y: -2.760960578918457
+    theta: 1.57
+    type: charger
+    enabled: true
+
+  - id: charger_entry
+    name: "충전소 진입"
+    x: 0.6978071331977844
+    y: -1.8588165044784546
+    theta: 0.0
+    type: charger_entry
+    enabled: true
+
+  - id: rc_a_stop
+    name: "RC A 대기"
+    x: 0.7064711451530457
+    y: 0.29016929864883423
+    theta: 0.0
+    type: standby
+    enabled: true
+
+  - id: rc_b_stop
+    name: "RC B 대기"
+    x: 0.5868964791297913
+    y: -0.6470909118652344
+    theta: 0.0
+    type: standby
+    enabled: true
+
+edges:
+  - id: e_loading_intersection_1
+    from_node: loading
+    to_node: intersection_1
+    distance: 2.613
+    expected_time: 14.5
+    direction: two_way
+    weight: 1.0
+
+  - id: e_intersection_1_a_entry
+    from_node: intersection_1
+    to_node: a_entry
+    distance: 1.243
+    expected_time: 6.9
+    direction: two_way
+    weight: 1.0
+
+  - id: e_a_entry_rc_a_stop
+    from_node: a_entry
+    to_node: rc_a_stop
+    distance: 0.574
+    expected_time: 5.7
+    direction: two_way
+    weight: 1.0
+
+  - id: e_a_entry_a_leader_slot
+    from_node: a_entry
+    to_node: a_leader_slot
+    distance: 1.268
+    expected_time: 12.7
+    direction: two_way
+    weight: 1.0
+
+  - id: e_loading_intersection_2
+    from_node: loading
+    to_node: intersection_2
+    distance: 1.239
+    expected_time: 6.9
+    direction: two_way
+    weight: 1.0
+
+  - id: e_intersection_2_b_entry
+    from_node: intersection_2
+    to_node: b_entry
+    distance: 1.269
+    expected_time: 7.1
+    direction: two_way
+    weight: 1.0
+
+  - id: e_b_entry_b_leader_slot
+    from_node: b_entry
+    to_node: b_leader_slot
+    distance: 1.196
+    expected_time: 12.0
+    direction: two_way
+    weight: 1.0
+
+  - id: e_loading_charger_entry
+    from_node: loading
+    to_node: charger_entry
+    distance: 1.934
+    expected_time: 19.3
+    direction: two_way
+    weight: 1.0
+
+  - id: e_charger_entry_charger_front
+    from_node: charger_entry
+    to_node: charger_front
+    distance: 1.080
+    expected_time: 21.6
+    direction: two_way
+    weight: 1.0
+
+  - id: e_b_entry_rc_b_stop
+    from_node: b_entry
+    to_node: rc_b_stop
+    distance: 0.818
+    expected_time: 8.2
+    direction: two_way
+    weight: 1.0

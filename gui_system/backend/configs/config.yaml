@@ -1,0 +1,45 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  static_dir: "../../frontend/dist"
+  graceful_shutdown_seconds: 5
+
+bridge:
+  # grpc | websocket
+  # 실 봇/ROS2 통신은 ./scripts/run_bridge.sh로 Python 브릿지(:9090) 띄워서 사용.
+  # 브릿지 미가동이어도 백엔드의 미션 컨텍스트(route/goal/ETA)는 추적·broadcast
+  # 되므로 맵의 노드 필터·요약 카드는 동작한다(README §7.12). 봇 라이브 데이터만 부재.
+  type: "websocket"
+  address: "localhost:9090"
+  protocol_version: 1
+
+db:
+  path: "../../backup/sqlite_backup/gui.db"
+  wal: true
+  backup_dir: "../../backup/sqlite_backup"
+  backup_retention_days: 7
+
+auth:
+  admin_password_hash: ""
+  session_ttl_minutes: 60
+
+emergency:
+  allowed_cidrs:
+    - "127.0.0.1/32"
+    - "192.168.0.0/16"
+    - "10.0.0.0/8"
+  rate_limit_per_minute: 30
+
+audit:
+  path: "../logs/audit.jsonl"
+
+eta:
+  swarm_correction_seconds: 0
+  min_samples_for_average: 5
+  default_pick_seconds: 8
+  default_drop_seconds: 5
+
+# Paths below are resolved relative to this file's directory.
+nodes_file: "../../maps/nodes.yaml"
+map_yaml: "../../maps/map.yaml"
+migrations_dir: "../migrations"

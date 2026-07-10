@@ -1,0 +1,32 @@
+# Bridge-local config. The Go backend yaml owns the transport
+# (bridge.type, bridge.address); this file carries ROS2 specifics the
+# backend does not need to know about.
+
+ros:
+  # ROS_DOMAIN_ID used to talk to the TurtleBot3 fleet.
+  # The bridge exports this to its own process env on startup so
+  # operators don't have to remember to set it manually.
+  domain_id: 27
+
+  # Robot fleet. Each entry maps the GUI's logical robot_id to the
+  # topic namespace ROS2 uses. For a single TurtleBot3 in the global
+  # namespace, leave `namespace` empty.
+  robots:
+    - id: tb3_leader
+      namespace: ""
+    # RC카 팔로워 — Topology_Graph_test의 rc_car_follower_node가
+    # /rc_car/odom(nav_msgs/Odometry, frame_id="map")로 encoder dead-reckoning
+    # pose를 발행. AMCL·scan·battery는 없음. 브릿지는 /rc_car/odom만 받아
+    # robot_pose envelope으로 broadcast → GUI에 follower 마커로 표시됨.
+    - id: rc_car_follower
+      namespace: rc_car
+    # Uncomment when running additional TurtleBot3 followers:
+    # - id: follower_1
+    #   namespace: tb3_1
+    # - id: follower_2
+    #   namespace: tb3_2
+
+  # Topic names live inside topic_subscriber.py since the per-robot
+  # subscription wiring depends on the namespace prefix already. If
+  # you remap a topic on the bot (e.g. /amcl_pose → /robot_pose),
+  # adjust the strings in that file.

@@ -1,0 +1,5 @@
+PyYAML>=6.0
+websockets>=12.0
+# Optional, used only when bridge.type=grpc:
+# grpcio>=1.62
+# grpcio-tools>=1.62

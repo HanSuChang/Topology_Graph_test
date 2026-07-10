@@ -1,0 +1,78 @@
+// Canonical schema for the gRPC bridge between the Python ROS2 process
+// and the Go backend. The Must demo uses WebSocket+JSON, but the
+// envelope shapes here mirror the JSON contract field-for-field so
+// `scripts/generate_proto.sh` can wire gRPC without changing any
+// dashboard-side code.
+
+syntax = "proto3";
+
+package gui_system.bridge.v1;
+
+option go_package = "github.com/ros2_ubuntu_ws/gui_system/backend/internal/proto;proto";
+
+service Bridge {
+  rpc SubscribePose(SubscribeRequest) returns (stream RobotPose);
+  rpc SubscribeMissionState(SubscribeRequest) returns (stream StatusEvent);
+  rpc SubscribePath(SubscribeRequest) returns (stream PathData);
+  rpc SendCommand(Command) returns (CommandResult);
+  rpc GetCurrentState(StateRequest) returns (SystemState);
+}
+
+message SubscribeRequest { string robot_id = 1; }
+message StateRequest {}
+
+message Pose {
+  double x = 1;
+  double y = 2;
+  double theta = 3;
+}
+
+message RobotPose {
+  string robot_id = 1;
+  Pose pose = 2;
+  double battery = 3;
+  string status = 4;
+  string connection_state = 5;
+  int64 timestamp = 6;
+}
+
+message StatusEvent {
+  string event_type = 1;
+  string robot_id = 2;
+  string mission_id = 3;
+  int64 timestamp = 4;
+  string severity = 5;
+}
+
+message PathPoint {
+  double x = 1;
+  double y = 2;
+}
+
+message PathData {
+  string robot_id = 1;
+  string path_id = 2;
+  string kind = 3;
+  repeated PathPoint points = 4;
+}
+
+message Command {
+  string request_id = 1;
+  string kind = 2;
+  map<string, string> payload = 3;
+}
+
+message CommandResult {
+  string request_id = 1;
+  bool accepted = 2;
+  string message = 3;
+}
+
+message SystemState {
+  string mission_status = 1;
+  bool emergency_active = 2;
+  repeated RobotPose robots = 3;
+  string current_mission_id = 4;
+  string current_goal_node = 5;
+  double eta_seconds = 6;
+}
