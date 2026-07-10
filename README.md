@@ -650,19 +650,3 @@ cd gui_system
 ```
 
 ROS domain은 bridge 설정 기준 `ROS_DOMAIN_ID=27`입니다.
-
-## 포트폴리오 관점에서 강조할 점
-
-이 프로젝트는 단일 알고리즘 데모가 아니라, 실제 로봇 시스템에서 필요한 여러 계층을 통합한 프로젝트입니다.
-
-- 지도와 topology graph를 이용한 미션 단위 자율주행
-- LiDAR/occupancy grid 기반 로컬 장애물 회피
-- A*, Pure Pursuit, MPPI를 상황별로 조합한 hybrid navigation
-- leader-follower 구조의 RC카 과거 궤적 추종
-- encoder 기반 odometry와 serial PWM 제어
-- ArUco marker 기반 정밀 접근
-- OpenCV + inverse kinematics 기반 로봇팔 pick-and-place
-- React/Go/Python bridge 기반 실시간 관제 GUI
-- WebSocket fan-out, REST API, SQLite mission history, ETA 계산
-
-즉, 주행 알고리즘, 로봇 제어, 임베디드 serial 제어, 비전, 매니퓰레이터, 웹 관제까지 연결한 통합 AMR 프로젝트입니다.
