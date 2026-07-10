@@ -1,4 +1,6 @@
-# Topology Graph 기반 자율주행 물류 로봇 + RC카 추종 + 로봇팔 + GUI 관제 시스템
+# 매니퓰레이터가 탑재된 터틀봇 기반 AMR 물류 이송 시스템
+
+## Topology Graph 기반 자율주행 물류 로봇 + RC카 추종 + 로봇팔 + GUI 관제 시스템
 
 ![ROS2 Humble](https://img.shields.io/badge/ROS2-Humble-22314E?style=for-the-badge&logo=ros&logoColor=white)
 ![C++](https://img.shields.io/badge/C++-Mission%20Control-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
