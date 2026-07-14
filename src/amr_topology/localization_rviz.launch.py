@@ -1,5 +1,6 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -20,6 +21,11 @@ def generate_launch_description():
         FindPackageShare('amr_topology'),
         'rviz',
         'amcl_localization.rviz',
+    ])
+    default_mppi_params = PathJoinSubstitution([
+        FindPackageShare('amr_topology'),
+        'config',
+        'mppi_controller.yaml',
     ])
 
     map_arg = DeclareLaunchArgument(
@@ -108,6 +114,17 @@ def generate_launch_description():
         }],
     )
 
+    mppi_controller = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('amr_topology'),
+                'launch',
+                'mppi_controller.launch.py',
+            ])
+        ]),
+        launch_arguments={'params': default_mppi_params}.items(),
+    )
+
     return LaunchDescription([
         map_arg,
         amcl_params_arg,
@@ -118,6 +135,7 @@ def generate_launch_description():
         map_server,
         amcl,
         lifecycle_manager,
+        mppi_controller,
         topology_markers,
         rviz,
     ])

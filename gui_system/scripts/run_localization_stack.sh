@@ -17,13 +17,34 @@ set -u
 export ROS_DOMAIN_ID
 
 pids=()
+cleaned_up=0
 cleanup() {
+  if [ "$cleaned_up" -eq 1 ]; then
+    return
+  fi
+  cleaned_up=1
+
+  echo "[localization] stopping local launch processes"
   for pid in "${pids[@]:-}"; do
     kill "$pid" 2>/dev/null || true
   done
+
+  echo "[localization] stopping turtlebot launch processes"
+  ssh -o ConnectTimeout=2 "$TURTLEBOT_SSH" "
+    pkill -TERM -f 'ros2 launch amr_topology picam_rotate_compressed.launch.py' || true
+    pkill -TERM -f 'image_rotate_compress_node' || true
+    pkill -TERM -f 'ros2 launch amr_topology esp32_serial_bridge.launch.py' || true
+    pkill -TERM -f 'esp32_servo_bridge_node.py' || true
+  " 2>/dev/null || true
+
   wait 2>/dev/null || true
 }
-trap cleanup INT TERM EXIT
+on_signal() {
+  cleanup
+  exit 130
+}
+trap on_signal INT TERM
+trap cleanup EXIT
 
 start() {
   local name="$1"
@@ -39,7 +60,7 @@ start "mppi_controller" ros2 launch amr_topology mppi_controller.launch.py
 start "charger_navigation" ros2 launch amr_topology charger_navigation.launch.py
 start "picam_rotate_compressed@turtlebot" ssh "$TURTLEBOT_SSH"   "export ROS_DOMAIN_ID=$ROS_DOMAIN_ID; source /opt/ros/humble/setup.bash; if [ -f $TURTLEBOT_TOPOLOGY_WS/install/setup.bash ]; then source $TURTLEBOT_TOPOLOGY_WS/install/setup.bash; fi; ros2 launch amr_topology picam_rotate_compressed.launch.py jpeg_quality:=70"
 start "esp32_serial_bridge@turtlebot" ssh "$TURTLEBOT_SSH"   "export ROS_DOMAIN_ID=$ROS_DOMAIN_ID; source /opt/ros/humble/setup.bash; if [ -f $TURTLEBOT_TOPOLOGY_WS/install/setup.bash ]; then source $TURTLEBOT_TOPOLOGY_WS/install/setup.bash; fi; ros2 launch amr_topology esp32_serial_bridge.launch.py"
-start "arm_vision_pick" ros2 launch amr_topology arm_vision_pick.launch.py target_color:=blue
+start "arm_vision_pick" ros2 launch amr_topology arm_vision_pick.launch.py target_color:=blue auto_start_enabled:=true
 start "amcl" ros2 run nav2_amcl amcl --ros-args \
   -p use_sim_time:=false \
   -p base_frame_id:=base_footprint \

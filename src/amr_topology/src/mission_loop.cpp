@@ -1161,7 +1161,7 @@ private:
 
     FollowPath::Goal goal;
     goal.path = make_mppi_rescue_path(pose, target, corridor);
-    goal.controller_id = "FollowPath";
+    goal.controller_id = "RescueFollowPath";
     goal.goal_checker_id = "general_goal_checker";
     const int64_t goal_id = ++mppi_rescue_goal_id_;
     mppi_active_goal_id_ = goal_id;
@@ -2187,12 +2187,17 @@ private:
         if (charger_parking_interrupt_requested()) {
           return;
         }
+        publish_rc_car_mode("drive_forward_2cm");
+        wait_for_rc_car_status("drive_forward_2cm_done", "RC car forward after ArUco turn");
+        if (charger_parking_interrupt_requested()) {
+          return;
+        }
         publish_rc_car_mode("stop");
         rotate_ccw_relative(M_PI, "after RC car 90 degree turn");
         if (charger_parking_interrupt_requested()) {
           return;
         }
-        drive_straight_distance(-0.075);
+        drive_straight_distance(-0.05);
         if (charger_parking_interrupt_requested()) {
           return;
         }
@@ -2204,7 +2209,7 @@ private:
         publish_arm_mission_start();
         RCLCPP_INFO(
           this->get_logger(),
-          "First ArUco mission complete after 180 degree turn and 7.5cm backward move; stopping");
+          "First ArUco mission complete after 180 degree turn and 5cm backward move; stopping");
         return;
       }
 
@@ -2310,6 +2315,11 @@ private:
         }
         publish_rc_car_mode("turn_ccw_90");
         wait_for_rc_car_status("turn_ccw_90_done", "RC car post ArUco turn");
+        if (charger_parking_interrupt_requested()) {
+          return;
+        }
+        publish_rc_car_mode("drive_forward_2cm");
+        wait_for_rc_car_status("drive_forward_2cm_done", "RC car forward after post ArUco turn");
         if (charger_parking_interrupt_requested()) {
           return;
         }
@@ -2603,6 +2613,7 @@ private:
       mode == "slot_wait_a" ||
       mode == "turn_ccw_90" ||
       mode == "turn_cw_90" ||
+      mode == "drive_forward_2cm" ||
       mode == "drive_to_post_aruco_target")
     {
       last_rc_car_slot_status_.clear();

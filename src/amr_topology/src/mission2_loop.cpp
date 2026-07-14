@@ -117,6 +117,7 @@ public:
     this->declare_parameter<std::string>("rc_car_odom_topic", "/rc_car/odom");
     this->declare_parameter<std::string>("aruco_enable_topic", "/aruco_marker/enable");
     this->declare_parameter<std::string>("aruco_target_topic", "/aruco_marker/target");
+    this->declare_parameter<std::string>("arm_mission_start_topic", "B_mission_start");
     this->declare_parameter<std::string>("scan_topic", "/scan");
     this->declare_parameter<std::string>("map_topic", "/map");
     this->declare_parameter<bool>("enable_lidar_safety", true);
@@ -382,6 +383,8 @@ public:
     aruco_enable_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       this->get_parameter("aruco_enable_topic").as_string(),
       rclcpp::QoS(1).reliable().transient_local());
+    arm_mission_start_pub_ = this->create_publisher<std_msgs::msg::String>(
+      this->get_parameter("arm_mission_start_topic").as_string(), 10);
     aruco_target_sub_ = this->create_subscription<geometry_msgs::msg::PointStamped>(
       this->get_parameter("aruco_target_topic").as_string(),
       10,
@@ -1063,7 +1066,7 @@ private:
 
     FollowPath::Goal goal;
     goal.path = make_mppi_rescue_path(pose, target, corridor);
-    goal.controller_id = "FollowPath";
+    goal.controller_id = "RescueFollowPath";
     goal.goal_checker_id = "general_goal_checker";
     const int64_t goal_id = ++mppi_rescue_goal_id_;
     mppi_active_goal_id_ = goal_id;
@@ -2185,20 +2188,29 @@ private:
         if (charger_parking_interrupt_requested()) {
           return;
         }
+        publish_rc_car_mode("drive_forward_2cm");
+        wait_for_rc_car_status("drive_forward_2cm_done", "RC car forward after ArUco turn");
+        if (charger_parking_interrupt_requested()) {
+          return;
+        }
         publish_rc_car_mode("stop");
         rotate_ccw_relative(M_PI, "after RC car 90 degree turn");
         if (charger_parking_interrupt_requested()) {
           return;
         }
-        drive_straight_distance(-0.075);
+        drive_straight_distance(-0.05);
         if (charger_parking_interrupt_requested()) {
           return;
         }
         stop();
         publish_rc_car_mode("stop");
+        rclcpp::sleep_for(1s);
+        set_aruco_detection_enabled(false);
+        rclcpp::sleep_for(200ms);
+        publish_arm_mission_start();
         RCLCPP_INFO(
           this->get_logger(),
-          "First ArUco mission complete after 180 degree turn and 7.5cm backward move; stopping");
+          "First ArUco mission complete after 180 degree turn and 5cm backward move; stopping");
         return;
       }
 
@@ -2304,6 +2316,11 @@ private:
         }
         publish_rc_car_mode("turn_ccw_90");
         wait_for_rc_car_status("turn_ccw_90_done", "RC car post ArUco turn");
+        if (charger_parking_interrupt_requested()) {
+          return;
+        }
+        publish_rc_car_mode("drive_forward_2cm");
+        wait_for_rc_car_status("drive_forward_2cm_done", "RC car forward after post ArUco turn");
         if (charger_parking_interrupt_requested()) {
           return;
         }
@@ -2598,6 +2615,7 @@ private:
       mode == "turn_ccw_90" ||
       mode == "turn_cw_90" ||
       mode == "align_b_stop_yaw" ||
+      mode == "drive_forward_2cm" ||
       mode == "drive_to_post_aruco_target")
     {
       last_rc_car_slot_status_.clear();
@@ -2607,6 +2625,14 @@ private:
     msg.data = mode;
     rc_car_mode_pub_->publish(msg);
     last_rc_car_mode_ = mode;
+  }
+
+  void publish_arm_mission_start()
+  {
+    std_msgs::msg::String msg;
+    msg.data = "start";
+    arm_mission_start_pub_->publish(msg);
+    RCLCPP_INFO(this->get_logger(), "Published B_mission_start after final backward move");
   }
 
   void schedule_rc_car_mode(const std::string & mode, double delay_seconds)
@@ -2763,6 +2789,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr rc_car_mode_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr aruco_enable_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr arm_mission_start_pub_;
   rclcpp::TimerBase::SharedPtr rc_car_mode_timer_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr mission_command_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr rc_car_slot_status_sub_;

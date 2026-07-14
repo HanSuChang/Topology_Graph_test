@@ -115,6 +115,7 @@ class ArmVisionGripper(Node):
         self.declare_parameter("image_topic", "/picam/image_raw")
         self.declare_parameter("compressed_image_topic", "/picam/image_rotated/compressed")
         self.declare_parameter("display", bool(os.environ.get("DISPLAY")))
+        self.declare_parameter("display_mask", False)
         self.declare_parameter("servo_angle_topic", "/arm_servo_angles")
         self.declare_parameter("status_topic", "/arm_vision_status")
         self.declare_parameter("command_topic", "/arm_vision_command")
@@ -138,6 +139,7 @@ class ArmVisionGripper(Node):
 
         self.target_color = self.get_parameter("target_color").value
         self.display = bool(self.get_parameter("display").value)
+        self.display_mask = bool(self.get_parameter("display_mask").value)
         self.control_interval = float(self.get_parameter("control_interval_sec").value)
         self.center_tolerance_u = float(self.get_parameter("center_tolerance_u").value)
         self.center_tolerance_v = float(self.get_parameter("center_tolerance_v").value)
@@ -188,11 +190,11 @@ class ArmVisionGripper(Node):
         self.ik_wrist_from_image_gain = 0.012
         self.ik_wrist_step_limit_deg = 0.7
 
-        self.start_pose = [45.0, 70.0, 90.0, 10.0, 140.0]
+        self.start_pose = [35.0, 70.0, 90.0, 10.0, 140.0]
         self.drop_pose = [130.0, 120.0, 80.0, 90.0, 50.0]
         self.gripper_open_angle = 140.0
         self.gripper_close_angle = 90.0
-        self.insert_final_s1_offset_deg = 40.0
+        self.insert_final_s1_offset_deg = 50.0
         self.insert_final_s2_offset_deg = -60.0
         self.insert_final_s3_offset_deg = -10.0
         self.gripper_open_wait_sec = 5.0
@@ -379,7 +381,8 @@ class ArmVisionGripper(Node):
 
         if self.display:
             cv2.imshow("arm_vision_camera", output)
-            cv2.imshow("arm_vision_mask", mask)
+            if self.display_mask:
+                cv2.imshow("arm_vision_mask", mask)
             self.handle_key(cv2.waitKey(1) & 0xFF, result)
 
     def handle_key(self, key, result):
@@ -499,7 +502,7 @@ class ArmVisionGripper(Node):
             self.publish_angles(self.current_pose())
             time.sleep(self.insert_joint_step_wait_sec)
             self.publish_status("placing object; moving s0 to drop side")
-            self.s0 = 120.0
+            self.s0 = 135.0
             self.publish_angles(self.current_pose())
             time.sleep(self.insert_joint_step_wait_sec)
             self.publish_status("placing object; moving arm to drop pose")
@@ -517,7 +520,7 @@ class ArmVisionGripper(Node):
             self.publish_angles(self.current_pose())
             time.sleep(self.return_to_start_delay_sec)
             self.publish_status("placing object; returning via side pose")
-            self.s0 = 120.0
+            self.s0 = 135.0
             self.s2 = 90.0
             self.s3 = 10.0
             self.gripper = 140.0

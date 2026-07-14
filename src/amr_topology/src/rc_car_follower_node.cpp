@@ -215,6 +215,7 @@ enum class FollowerMode
   TurnCcw90,
   TurnCw90,
   AlignBStopYaw,
+  DriveForward2cm,
   DriveToPostArucoTarget
 };
 
@@ -332,6 +333,9 @@ public:
     this->declare_parameter<double>("b_stop_align_yaw", M_PI / 2.0);
     this->declare_parameter<double>("b_stop_align_yaw_tolerance", 0.08);
     this->declare_parameter<int>("b_stop_align_turn_pwm", 70);
+    this->declare_parameter<double>("after_turn_forward_distance", 0.02);
+    this->declare_parameter<double>("after_turn_forward_tolerance", 0.005);
+    this->declare_parameter<int>("after_turn_forward_pwm", 65);
     this->declare_parameter<double>("post_aruco_target_x", 2.000904083251953);
     this->declare_parameter<double>("post_aruco_target_y", -0.001956900581717491);
     this->declare_parameter<double>("post_aruco_target_tolerance", 0.08);
@@ -489,6 +493,12 @@ public:
       0.005, this->get_parameter("b_stop_align_yaw_tolerance").as_double());
     b_stop_align_turn_pwm_ = std::clamp(
       static_cast<int>(this->get_parameter("b_stop_align_turn_pwm").as_int()), 0, 255);
+    after_turn_forward_distance_ = std::max(
+      0.0, this->get_parameter("after_turn_forward_distance").as_double());
+    after_turn_forward_tolerance_ = std::max(
+      0.001, this->get_parameter("after_turn_forward_tolerance").as_double());
+    after_turn_forward_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("after_turn_forward_pwm").as_int()), 0, 255);
     post_aruco_target_x_ = this->get_parameter("post_aruco_target_x").as_double();
     post_aruco_target_y_ = this->get_parameter("post_aruco_target_y").as_double();
     post_aruco_target_tolerance_ = std::max(
@@ -715,6 +725,8 @@ private:
       mode_ = FollowerMode::Follow;
       turn_ccw_90_completed_ = false;
       turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       post_aruco_target_completed_ = false;
       if (previous_mode != mode_) {
         follow_mode_started_at_ = this->now();
@@ -723,6 +735,8 @@ private:
       mode_ = FollowerMode::Align;
       turn_ccw_90_completed_ = false;
       turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
       clear_b_straight_latch();
@@ -730,6 +744,8 @@ private:
       mode_ = FollowerMode::TurnPrepareLeft;
       turn_ccw_90_completed_ = false;
       turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
       clear_b_straight_latch();
@@ -749,6 +765,8 @@ private:
       }
       mode_ = FollowerMode::TurnCcw90;
       publish_slot_status("turn_ccw_90_started");
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       clear_intersection_1_left_turn();
       clear_b_straight_latch();
     } else if (mode == "turn_cw_90") {
@@ -767,11 +785,30 @@ private:
       }
       mode_ = FollowerMode::TurnCw90;
       publish_slot_status("turn_cw_90_started");
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       clear_intersection_1_left_turn();
       clear_b_straight_latch();
     } else if (mode == "align_b_stop_yaw") {
       mode_ = FollowerMode::AlignBStopYaw;
       publish_slot_status("b_stop_align_started");
+      clear_intersection_1_left_turn();
+      clear_b_straight_latch();
+    } else if (mode == "drive_forward_2cm") {
+      if (after_turn_forward_completed_) {
+        mode_ = FollowerMode::Stop;
+        after_turn_forward_start_pose_.reset();
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+      if (mode_ == FollowerMode::DriveForward2cm && after_turn_forward_start_pose_.has_value()) {
+        return;
+      }
+      if (follower_pose_.has_value()) {
+        after_turn_forward_start_pose_ = follower_pose_.value();
+      }
+      mode_ = FollowerMode::DriveForward2cm;
+      publish_slot_status("drive_forward_2cm_started");
       clear_intersection_1_left_turn();
       clear_b_straight_latch();
     } else if (mode == "drive_to_post_aruco_target") {
@@ -791,6 +828,8 @@ private:
       mode_ = FollowerMode::Stop;
       turn_ccw_90_completed_ = false;
       turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
       clear_b_straight_latch();
@@ -813,6 +852,7 @@ private:
       mode_ == FollowerMode::TurnCcw90 ||
       mode_ == FollowerMode::TurnCw90 ||
       mode_ == FollowerMode::AlignBStopYaw ||
+      mode_ == FollowerMode::DriveForward2cm ||
       mode_ == FollowerMode::DriveToPostArucoTarget)
     {
       if (!follower_pose_is_fresh()) {
@@ -879,6 +919,11 @@ private:
     }
     if (mode_ == FollowerMode::AlignBStopYaw) {
       const PwmCommand command = make_b_stop_align_command(follower);
+      send_pwm_command(command);
+      return;
+    }
+    if (mode_ == FollowerMode::DriveForward2cm) {
+      const PwmCommand command = make_after_turn_forward_command(follower);
       send_pwm_command(command);
       return;
     }
@@ -1780,6 +1825,38 @@ private:
     return PwmCommand{b_stop_align_turn_pwm_, -b_stop_align_turn_pwm_};
   }
 
+  PwmCommand make_after_turn_forward_command(const Pose2D & follower)
+  {
+    if (!after_turn_forward_start_pose_.has_value()) {
+      after_turn_forward_start_pose_ = follower;
+    }
+
+    const auto start = after_turn_forward_start_pose_.value();
+    const double dx = follower.x - start.x;
+    const double dy = follower.y - start.y;
+    const double progress = dx * std::cos(start.yaw) + dy * std::sin(start.yaw);
+    const double remaining = after_turn_forward_distance_ - progress;
+    if (remaining <= after_turn_forward_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      after_turn_forward_completed_ = true;
+      after_turn_forward_start_pose_.reset();
+      publish_slot_status("drive_forward_2cm_done");
+      return PwmCommand{0, 0};
+    }
+
+    const double heading_error = normalize_angle(start.yaw - follower.yaw);
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Driving RC car forward after turn: progress=%.3f remaining=%.3f heading_error=%.2f",
+      progress,
+      remaining,
+      heading_error);
+
+    return apply_turn_to_pwm(after_turn_forward_pwm_, heading_error, near_turn_pwm_delta_);
+  }
+
   PwmCommand make_drive_to_post_aruco_target_command(const Pose2D & follower)
   {
     const double dx = post_aruco_target_x_ - follower.x;
@@ -2089,6 +2166,9 @@ private:
   double b_stop_align_yaw_{M_PI / 2.0};
   double b_stop_align_yaw_tolerance_{0.08};
   int b_stop_align_turn_pwm_{70};
+  double after_turn_forward_distance_{0.02};
+  double after_turn_forward_tolerance_{0.005};
+  int after_turn_forward_pwm_{65};
   double post_aruco_target_x_{2.000904083251953};
   double post_aruco_target_y_{-0.001956900581717491};
   double post_aruco_target_tolerance_{0.08};
@@ -2118,11 +2198,13 @@ private:
   bool intersection_1_left_turn_completed_{false};
   bool turn_ccw_90_completed_{false};
   bool turn_cw_90_completed_{false};
+  bool after_turn_forward_completed_{false};
   bool post_aruco_target_completed_{false};
   bool encoder_ready_{false};
   bool encoder_startup_settle_logged_{false};
   std::optional<double> turn_ccw_90_target_yaw_;
   std::optional<double> turn_cw_90_target_yaw_;
+  std::optional<Pose2D> after_turn_forward_start_pose_;
   PwmCommand last_sent_pwm_command_;
   double encoder_balance_trim_pwm_{0.0};
   std::string last_command_;

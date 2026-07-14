@@ -28,10 +28,6 @@ export function PoseEstimateCard({ className = "" }: { className?: string }) {
       >
         {active ? "추정 중… (맵에서 클릭+드래그)" : "위치 추정 시작"}
       </button>
-      <p className="text-[11px] text-muted mt-2 leading-relaxed">
-        버튼을 누른 뒤 맵의 한 점을 클릭해 위치를, 그 상태로 드래그해 방향을
-        지정합니다. 마우스를 떼면 `/initialpose`로 전송됩니다.
-      </p>
     </Card>
   );
 }

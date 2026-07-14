@@ -54,6 +54,7 @@ export function MapPanel() {
       // 브릿지 왕복이 느려도 즉각적인 피드백을 위해 mouse-up 시 즉시
       // 비활성화한다. 다음 추정에는 버튼을 다시 눌러야 한다.
       poseEstimate.setActive(false);
+      renderer.allowPoseJumpFor(5000);
       if (pendingPoseRef.current) {
         window.clearTimeout(pendingPoseRef.current.timer);
       }

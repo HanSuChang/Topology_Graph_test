@@ -93,6 +93,8 @@ export class MapRenderer {
   private remotePose:
     | { x: number; y: number; theta: number; expires: number }
     | null = null;
+  private poseJumpBypassUntil = 0;
+  private poseJumpCandidates = new Map<string, { x: number; y: number; theta: number; count: number }>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -193,7 +195,13 @@ export class MapRenderer {
     this.remotePose = { x, y, theta, expires: performance.now() + ttlMs };
   }
 
+  allowPoseJumpFor(ms = 5000): void {
+    this.poseJumpBypassUntil = performance.now() + ms;
+    this.poseJumpCandidates.clear();
+  }
+
   updateRobotPose(id: string, x: number, y: number, theta: number) {
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(theta)) return;
     const prev = this.robots.get(id);
     const color = ROBOT_COLORS[id] ?? "#94a3b8";
     const now = performance.now();
@@ -205,12 +213,25 @@ export class MapRenderer {
     // lerp가 끝나기 전에 다음 샘플이 오면(불규칙 도착) 마커가 옛 시작점으로
     // 되튀던 현상을 막는다.
     const disp = robotDisplay(prev, now);
+    const interval = now - (prev.lastUpdate ?? now);
+    const dtSec = Math.max(0.05, interval / 1000);
+    const jump = Math.hypot(x - disp.x, y - disp.y);
+    const maxReasonableJump = Math.max(1.0, dtSec * 1.5);
+    if (now > this.poseJumpBypassUntil && jump > maxReasonableJump) {
+      const candidate = this.poseJumpCandidates.get(id);
+      const sameCandidate = candidate && Math.hypot(candidate.x - x, candidate.y - y) < 0.35;
+      const nextCount = sameCandidate ? candidate.count + 1 : 1;
+      if (nextCount < 3) {
+        this.poseJumpCandidates.set(id, { x, y, theta, count: nextCount });
+        return;
+      }
+    }
+    this.poseJumpCandidates.delete(id);
     prev.x = disp.x;
     prev.y = disp.y;
     prev.fromTheta = disp.theta;
     // 직전 업데이트와의 실제 간격을 lerp 시간으로 쓴다. TF가 20Hz로 들어오면
     // RViz2처럼 거의 실시간으로 따라가야 하므로 보간은 짧게 유지한다.
-    const interval = now - (prev.lastUpdate ?? now);
     prev.lerpDur = Math.min(220, Math.max(60, (interval || 80) * 1.2));
     prev.lastUpdate = now;
     // 새 목표 위치·heading. robotDisplay가 from→target으로 위치와 heading을

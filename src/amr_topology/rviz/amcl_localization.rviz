@@ -43,6 +43,40 @@ Visualization Manager:
         Value: /map
       Use Timestamp: false
       Value: true
+    - Alpha: 0.65
+      Binary representation: false
+      Binary threshold: 100
+      Class: rviz_default_plugins/Map
+      Color Scheme: costmap
+      Draw Behind: false
+      Enabled: true
+      Name: Global costmap inflation
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /global_costmap/costmap
+      Use Timestamp: false
+      Value: true
+    - Alpha: 0.8
+      Binary representation: false
+      Binary threshold: 100
+      Class: rviz_default_plugins/Map
+      Color Scheme: costmap
+      Draw Behind: false
+      Enabled: true
+      Name: Local costmap inflation
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /local_costmap/costmap
+      Use Timestamp: false
+      Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15

@@ -29,6 +29,7 @@ def generate_launch_description():
     rosbridge_port = LaunchConfiguration("rosbridge_port")
     serial_port = LaunchConfiguration("serial_port")
     display = LaunchConfiguration("display")
+    display_mask = LaunchConfiguration("display_mask")
 
     return LaunchDescription(
         [
@@ -54,6 +55,7 @@ def generate_launch_description():
             DeclareLaunchArgument("rosbridge_port", default_value="9090"),
             DeclareLaunchArgument("serial_port", default_value="auto"),
             DeclareLaunchArgument("display", default_value="true"),
+            DeclareLaunchArgument("display_mask", default_value="false"),
             Node(
                 package="amr_topology",
                 executable="image_rotate_compress_node",
@@ -110,6 +112,7 @@ def generate_launch_description():
                         "image_topic": image_topic,
                         "compressed_image_topic": compressed_image_topic,
                         "display": ParameterValue(display, value_type=bool),
+                        "display_mask": ParameterValue(display_mask, value_type=bool),
                         "auto_start_enabled": ParameterValue(
                             auto_start_enabled,
                             value_type=bool,

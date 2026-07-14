@@ -29,6 +29,7 @@ if HAS_RCLPY:
     from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist  # type: ignore  # noqa: F401
     from nav_msgs.msg import Odometry, Path  # type: ignore
     from sensor_msgs.msg import BatteryState, LaserScan  # type: ignore
+    from std_msgs.msg import Int32MultiArray, String  # type: ignore
     from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy  # type: ignore
     try:
         import tf2_ros  # type: ignore
@@ -84,6 +85,85 @@ class TopicSubscriber:
         for r in robots:
             self._wire(r["id"], r.get("namespace", r["id"]))
         self._setup_tf(node, robots)
+        self._setup_mission_topics()
+
+    def _setup_mission_topics(self) -> None:
+        qos = QoSProfile(
+            depth=10,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+        )
+        self.subs.append(
+            self.node.ros_node.create_subscription(
+                String,
+                "A_mission_finish",
+                self._on_arm_mission_finish,
+                qos,
+            )
+        )
+        self.subs.append(
+            self.node.ros_node.create_subscription(
+                String,
+                "/arm_vision_status",
+                self._on_arm_vision_status,
+                qos,
+            )
+        )
+        self.subs.append(
+            self.node.ros_node.create_subscription(
+                Int32MultiArray,
+                "/arm_servo_angles",
+                self._on_arm_servo_angles,
+                qos,
+            )
+        )
+
+    def _arm_alert(self, event_type: str, payload: dict[str, Any]) -> None:
+        self.sink({
+            "type": "alert",
+            "robot_id": "manipulator",
+            "timestamp": int(time.time() * 1000),
+            "seq": 0,
+            "version": 1,
+            "payload": {
+                "event_type": event_type,
+                "robot_id": "manipulator",
+                "severity": "info",
+                "timestamp": int(time.time() * 1000),
+                "payload": payload,
+            },
+        })
+
+    def _on_arm_vision_status(self, msg: Any) -> None:
+        text = str(getattr(msg, "data", "")).strip()
+        self._arm_alert("arm_vision_status", {"status_text": text})
+
+    def _on_arm_servo_angles(self, msg: Any) -> None:
+        angles = [int(v) for v in list(getattr(msg, "data", []))]
+        if len(angles) != 5:
+            return
+        self._arm_alert("arm_servo_angles", {"angles": angles})
+
+    def _on_arm_mission_finish(self, msg: Any) -> None:
+        data = str(getattr(msg, "data", "")).strip().lower()
+        if data in ("0", "false", "off", "stop"):
+            return
+        self.sink({
+            "type": "mission_state",
+            "robot_id": "tb3_leader",
+            "timestamp": int(time.time() * 1000),
+            "seq": 0,
+            "version": 1,
+            "payload": {
+                "event_type": "mission_state",
+                "robot_id": "tb3_leader",
+                "timestamp": int(time.time() * 1000),
+                "payload": {
+                    "status": "completed",
+                    "finish_topic": "A_mission_finish",
+                    "finish_value": data or "finish",
+                },
+            },
+        })
 
     def _wire(self, robot_id: str, namespace: str) -> None:
         raw_ns = (namespace or "").strip("/")

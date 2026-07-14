@@ -30,6 +30,7 @@ if HAS_RCLPY:
     from geometry_msgs.msg import PoseStamped  # type: ignore
     from geometry_msgs.msg import PoseWithCovarianceStamped  # type: ignore
     from std_msgs.msg import String  # type: ignore
+    from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy  # type: ignore
     from rclpy.action import ActionClient  # type: ignore
     try:
         from nav2_msgs.action import NavigateToPose  # type: ignore
@@ -51,11 +52,18 @@ class CommandHandler:
         self.emergency = False
         self.last_goal: dict[str, Any] = {}
         self.cmd_vel_pubs: dict[str, Any] = {}
+        self.rc_car_mode_pub: Optional[Any] = None
         self.nav_clients: dict[str, Any] = {}
         self.initialpose_pubs: dict[str, Any] = {}
         self.mission_command_pubs: dict[str, Any] = {}
         if not HAS_RCLPY or node.ros_node is None:
             return
+        rc_mode_qos = QoSProfile(
+            depth=1,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.rc_car_mode_pub = node.ros_node.create_publisher(String, "/rc_car/follower_mode", rc_mode_qos)
         for r in robots:
             raw_ns = (r.get("namespace") or "").strip("/")
             ns = ("/" + raw_ns) if raw_ns else ""
@@ -123,7 +131,7 @@ class CommandHandler:
         if kind == "emergency_stop":
             self.emergency = True
             self._cancel_all()
-            self._publish_zero_twist()
+            self._publish_emergency_stop()
             return "stopped"
         if kind == "emergency_clear":
             self.emergency = False
@@ -210,6 +218,21 @@ class CommandHandler:
         zero = Twist()
         for pub in self.cmd_vel_pubs.values():
             pub.publish(zero)
+
+    def _publish_rc_car_stop(self) -> None:
+        if not HAS_RCLPY or self.rc_car_mode_pub is None:
+            return
+        msg = String()
+        msg.data = "stop"
+        self.rc_car_mode_pub.publish(msg)
+
+    def _publish_emergency_stop(self) -> None:
+        if not HAS_RCLPY:
+            return
+        for _ in range(10):
+            self._publish_zero_twist()
+            self._publish_rc_car_stop()
+            time.sleep(0.05)
 
     def _pose_stamped(self, x: float, y: float, theta: float) -> Any:
         ps = PoseStamped()

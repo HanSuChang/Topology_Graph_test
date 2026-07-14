@@ -33,9 +33,9 @@ export function translateMission(s?: string): string | undefined {
   if (!s) return undefined;
   return ({
     pending: "대기",
-    running: "진행 중",
+    running: "진행중",
     paused: "일시정지",
-    completed: "완료",
+    completed: "진행 완료",
     failed: "실패",
     aborted: "중단",
     // 물류 미션 FSM 6단계

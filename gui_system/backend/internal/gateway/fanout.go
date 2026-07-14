@@ -103,6 +103,9 @@ func (f *Fanout) runMission(ctx context.Context) {
 			if !ok {
 				return
 			}
+			if status, ok := e.Payload["status"].(string); ok {
+				f.cache.SetMissionStatus(domain.MissionStatus(status))
+			}
 			f.hub.BroadcastCritical(f.env(TypeMissionState, "", e))
 		}
 	}

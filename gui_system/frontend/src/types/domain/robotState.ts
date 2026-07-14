@@ -26,6 +26,7 @@ export interface RobotState {
   robot_id: string;
   pose: Pose;
   battery: number;
+  velocity?: number;
   status: RobotStatus;
   current_node: string;
   connection_state: ConnectionState;

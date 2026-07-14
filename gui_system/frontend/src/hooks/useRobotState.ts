@@ -54,7 +54,36 @@ export function useRobotState(): RobotState[] {
     // 로봇이 멈춰 있으면 재발행되지 않을 수 있다.)
     const offTel = ws.on("telemetry", (e) => {
       const id = (e.payload?.robot_id ?? e.robot_id) as string | undefined;
-      if (id) mark(id);
+      if (!id) return;
+      mark(id);
+      const velocity = Number(e.payload?.velocity ?? 0);
+      const battery = Number(e.payload?.battery ?? 0);
+      setById((prev) => {
+        const next = new Map(prev);
+        const prior = next.get(id);
+        if (!prior) {
+          next.set(id, {
+            robot_id: id,
+            pose: { x: 0, y: 0, theta: 0 },
+            battery: Number.isFinite(battery) ? battery : 0,
+            velocity: Number.isFinite(velocity) ? velocity : 0,
+            status: Math.abs(velocity) > 0.03 ? "moving" : "stopped",
+            current_node: "",
+            connection_state: "online",
+            last_update: new Date().toISOString(),
+          });
+          return next;
+        }
+        next.set(id, {
+          ...prior,
+          battery: Number.isFinite(battery) && battery > 0 ? battery : prior.battery,
+          velocity: Number.isFinite(velocity) ? velocity : prior.velocity,
+          status: Math.abs(velocity) > 0.03 ? "moving" : prior.status === "moving" ? "stopped" : prior.status,
+          connection_state: "online",
+          last_update: new Date().toISOString(),
+        });
+        return next;
+      });
     });
     // 새 메시지가 없어도 stale 전이를 반영하려면 주기적으로 재평가해야 한다.
     const timer = setInterval(() => setTick((t) => t + 1), 1000);

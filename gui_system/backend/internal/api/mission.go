@@ -39,7 +39,9 @@ func (h *Handlers) sendCommand(c *gin.Context, kind domain.CommandKind, payload 
 	// 브릿지 결과와 무관하게 미션 컨텍스트는 갱신·broadcast한다 — route 발행이
 	// 브릿지 라이프사이클에 묶이지 않게 하기 위함. 봇 라이브 연결이 없어도
 	// 노드 필터·요약 카드·ETA가 즉시 동작한다.
-	h.updateMissionState(ctx, kind, payload)
+	if bridgeErr != nil || res.Accepted {
+		h.updateMissionState(ctx, kind, payload)
+	}
 	if bridgeErr != nil {
 		_ = h.Audit.Write(audit.Entry{IP: c.ClientIP(), Command: string(kind), Result: "bridge_offline", RequestID: reqID, Detail: bridgeErr.Error()})
 		c.JSON(http.StatusOK, gin.H{
@@ -311,6 +313,13 @@ func valueOr(m map[string]float64, k string, def float64) float64 {
 // 받아 Start 명령 payload로 forward한다. 모든 미션 관련 명령은 관리자
 // 세션을 요구한다.
 func (h *Handlers) StartMission(c *gin.Context) {
+	if h.Cache != nil && h.Cache.Snapshot().EmergencyActive {
+		c.JSON(http.StatusConflict, gin.H{
+			"accepted": false,
+			"message":  "긴급 정지 활성 중에는 미션을 시작할 수 없습니다",
+		})
+		return
+	}
 	var body map[string]interface{}
 	_ = c.ShouldBindJSON(&body)
 	target := payloadString(body, "target_node")
@@ -406,12 +415,19 @@ func (h *Handlers) ChangeGoal(c *gin.Context) {
 // 기록을 남긴다.
 func (h *Handlers) EmergencyStop(c *gin.Context) {
 	reqID := uuid.NewString()
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
-	defer cancel()
-	res, bridgeErr := h.Bridge.SendCommand(ctx, domain.Command{RequestID: reqID, Kind: domain.CmdEmergencyStop})
+	if h.Runner != nil {
+		stopCtx, stopCancel := context.WithTimeout(c.Request.Context(), 6*time.Second)
+		h.Runner.Stop(stopCtx)
+		stopCancel()
+	}
+	bridgeCtx, bridgeCancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer bridgeCancel()
+	res, bridgeErr := h.Bridge.SendCommand(bridgeCtx, domain.Command{RequestID: reqID, Kind: domain.CmdEmergencyStop})
 	// 긴급 정지는 봇 라이브 연결과 무관하게 백엔드 상태에 즉시 반영한다 — 운영자가
 	// 누른 의도를 GUI에 즉시 표시하고, 봇이 켜지면 다음 명령부터 반영되도록.
 	h.Cache.SetEmergency(true)
+	h.completeActiveMission(c.Request.Context(), domain.MissionAborted)
+	h.Cache.SetMissionStatus(domain.MissionAborted)
 	h.broadcastMission()
 	if bridgeErr != nil {
 		_ = h.Audit.Write(audit.Entry{IP: c.ClientIP(), Command: "EmergencyStop", Result: "bridge_offline", RequestID: reqID, Detail: bridgeErr.Error()})

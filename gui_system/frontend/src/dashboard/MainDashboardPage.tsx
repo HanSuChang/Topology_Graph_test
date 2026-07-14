@@ -5,7 +5,7 @@ import { MissionControlCard } from "./cards/MissionControlCard";
 import { PoseEstimateCard } from "./cards/PoseEstimateCard";
 import { SummaryCard } from "./cards/SummaryCard";
 import { RobotStatusCard } from "./cards/RobotStatusCard";
-import { ManipulatorCard, ManipulatorCameraCard } from "./cards/ManipulatorCard";
+import { ManipulatorCard } from "./cards/ManipulatorCard";
 import { LogsStrip } from "./cards/LogsStrip";
 import { translateMission, translateAlert, isMotionEvent, translateMotion, robotLabel } from "./cards/shared";
 import { MapPanel } from "./navigation_map/MapPanel";
@@ -24,6 +24,7 @@ export default function MainDashboardPage() {
     });
     const offAlert = ws.on("alert", (e) => {
       const et = e.payload?.event_type as string | undefined;
+      if (et === "arm_vision_status" || et === "arm_servo_angles") return;
       // 주행 동작(motion_*)은 경보가 아니라 정보 로그로 — 로봇 이름 + 한글 동작.
       if (isMotionEvent(et)) {
         logInfo("주행", `${robotLabel(e.payload?.robot_id ?? e.robot_id)} ${translateMotion(et)}`);
@@ -82,14 +83,12 @@ function LeftRail() {
   );
 }
 
-// RightRail — (모바일: 위치 추정 / 데스크탑: 요약) + 매니퓰레이터 카메라
-// + 매니퓰레이터 상태. 주행 카메라는 운영 미사용으로 제거됨.
+// RightRail — (모바일: 위치 추정 / 데스크탑: 요약) + 매니퓰레이터 상태.
 function RightRail() {
   return (
     <div className="col-span-12 lg:col-span-3 flex flex-col gap-3 lg:min-h-0">
       <PoseEstimateCard className="lg:hidden" />
       <SummaryCard className="hidden lg:block" />
-      <ManipulatorCameraCard />
       <ManipulatorCard />
     </div>
   );
