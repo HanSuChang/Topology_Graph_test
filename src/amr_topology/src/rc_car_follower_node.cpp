@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <termios.h>
+#include <utility>
 #include <unistd.h>
 #include <vector>
 
@@ -209,21 +210,13 @@ enum class FollowerMode
 {
   Stop,
   Follow,
-  Return,
   Align,
   TurnPrepareLeft,
   TurnCcw90,
-  RcCarStart
-};
-
-enum class RcCarStartState
-{
-  Inactive,
-  TurnCcw90,
-  RotateToStart,
-  DriveToStart,
-  AlignStartYaw,
-  Complete
+  TurnCw90,
+  AlignBStopYaw,
+  DriveForward2cm,
+  DriveToPostArucoTarget
 };
 
 }  // namespace
@@ -241,6 +234,8 @@ public:
     this->declare_parameter<std::string>("command_topic", "/rc_car/command");
     this->declare_parameter<std::string>("encoder_ticks_topic", "/rc_car/encoder_ticks");
     this->declare_parameter<std::string>("serial_debug_topic", "/rc_car/serial_debug");
+    this->declare_parameter<std::string>("slot_wait_status_topic", "/rc_car/slot_wait_status");
+    this->declare_parameter<std::string>("profile", "a");
     this->declare_parameter<std::string>("arduino_port", "auto");
     this->declare_parameter<int>("arduino_baud_rate", 115200);
     this->declare_parameter<double>("target_distance", 0.70);
@@ -311,16 +306,40 @@ public:
     this->declare_parameter<double>("intersection_1_turn_assist_lateral_tolerance", 0.35);
     this->declare_parameter<double>("a_entry_x", 1.2001334428787231);
     this->declare_parameter<double>("a_entry_y", -0.001835942268371582);
+    this->declare_parameter<bool>("enable_b_turn_assist", true);
+    this->declare_parameter<double>("intersection_2_x", 2.478525400161743);
+    this->declare_parameter<double>("intersection_2_y", -1.389811635017395);
+    this->declare_parameter<double>("b_entry_x", 1.209195852279663);
+    this->declare_parameter<double>("b_entry_y", -1.3838512897491455);
+    this->declare_parameter<double>("b_leader_slot_x", 0.01311033871024847);
+    this->declare_parameter<double>("b_leader_slot_y", -1.3952621221542358);
+    this->declare_parameter<double>("b_turn_assist_radius", 1.35);
+    this->declare_parameter<double>("b_turn_assist_yaw_tolerance", 0.16);
+    this->declare_parameter<double>("b_turn_assist_min_progress", -0.25);
+    this->declare_parameter<double>("b_turn_assist_max_progress", 1.15);
+    this->declare_parameter<double>("b_turn_assist_lateral_tolerance", 0.75);
+    this->declare_parameter<bool>("enable_b_straight_latch", true);
+    this->declare_parameter<double>("b_straight_latch_min_progress", 0.05);
+    this->declare_parameter<double>("b_straight_latch_max_progress", 1.25);
+    this->declare_parameter<double>("b_straight_latch_lateral_tolerance", 0.35);
+    this->declare_parameter<double>("b_straight_heading_deadband", 0.25);
+    this->declare_parameter<int>("b_straight_turn_pwm_delta", 8);
     this->declare_parameter<double>("staged_yaw_tolerance", 0.12);
     this->declare_parameter<int>("staged_turn_pwm", 70);
-    this->declare_parameter<double>("turn_ccw_90_degrees", 90.0);
+    this->declare_parameter<double>("turn_ccw_90_degrees", 100.0);
+    this->declare_parameter<double>("turn_cw_90_degrees", 140.0);
     this->declare_parameter<double>("turn_ccw_90_yaw_tolerance", 0.08);
     this->declare_parameter<int>("turn_ccw_90_pwm", 70);
-    this->declare_parameter<double>("rc_car_start_position_tolerance", 0.20);
-    this->declare_parameter<double>("rc_car_start_yaw_tolerance", 0.15);
-    this->declare_parameter<int>("rc_car_start_forward_pwm", 85);
-    this->declare_parameter<int>("rc_car_start_turn_pwm", 70);
-    this->declare_parameter<int>("rc_car_start_drive_turn_pwm_delta", 18);
+    this->declare_parameter<double>("b_stop_align_yaw", M_PI / 2.0);
+    this->declare_parameter<double>("b_stop_align_yaw_tolerance", 0.08);
+    this->declare_parameter<int>("b_stop_align_turn_pwm", 70);
+    this->declare_parameter<double>("after_turn_forward_distance", 0.02);
+    this->declare_parameter<double>("after_turn_forward_tolerance", 0.005);
+    this->declare_parameter<int>("after_turn_forward_pwm", 65);
+    this->declare_parameter<double>("post_aruco_target_x", 2.000904083251953);
+    this->declare_parameter<double>("post_aruco_target_y", -0.001956900581717491);
+    this->declare_parameter<double>("post_aruco_target_tolerance", 0.08);
+    this->declare_parameter<int>("post_aruco_target_pwm", 85);
 
     target_distance_ = this->get_parameter("target_distance").as_double();
     distance_deadband_ = this->get_parameter("distance_deadband").as_double();
@@ -428,26 +447,64 @@ public:
       0.01, this->get_parameter("intersection_1_turn_assist_lateral_tolerance").as_double());
     a_entry_x_ = this->get_parameter("a_entry_x").as_double();
     a_entry_y_ = this->get_parameter("a_entry_y").as_double();
+    profile_ = this->get_parameter("profile").as_string();
+    enable_b_turn_assist_ = this->get_parameter("enable_b_turn_assist").as_bool();
+    intersection_2_x_ = this->get_parameter("intersection_2_x").as_double();
+    intersection_2_y_ = this->get_parameter("intersection_2_y").as_double();
+    b_entry_x_ = this->get_parameter("b_entry_x").as_double();
+    b_entry_y_ = this->get_parameter("b_entry_y").as_double();
+    b_leader_slot_x_ = this->get_parameter("b_leader_slot_x").as_double();
+    b_leader_slot_y_ = this->get_parameter("b_leader_slot_y").as_double();
+    b_turn_assist_radius_ = std::max(
+      0.01, this->get_parameter("b_turn_assist_radius").as_double());
+    b_turn_assist_yaw_tolerance_ = std::max(
+      0.01, this->get_parameter("b_turn_assist_yaw_tolerance").as_double());
+    b_turn_assist_min_progress_ =
+      this->get_parameter("b_turn_assist_min_progress").as_double();
+    b_turn_assist_max_progress_ =
+      this->get_parameter("b_turn_assist_max_progress").as_double();
+    b_turn_assist_lateral_tolerance_ = std::max(
+      0.01, this->get_parameter("b_turn_assist_lateral_tolerance").as_double());
+    enable_b_straight_latch_ = this->get_parameter("enable_b_straight_latch").as_bool();
+    b_straight_latch_min_progress_ =
+      this->get_parameter("b_straight_latch_min_progress").as_double();
+    b_straight_latch_max_progress_ =
+      this->get_parameter("b_straight_latch_max_progress").as_double();
+    b_straight_latch_lateral_tolerance_ = std::max(
+      0.01, this->get_parameter("b_straight_latch_lateral_tolerance").as_double());
+    b_straight_heading_deadband_ = std::max(
+      0.0, this->get_parameter("b_straight_heading_deadband").as_double());
+    b_straight_turn_pwm_delta_ = std::clamp(
+      static_cast<int>(this->get_parameter("b_straight_turn_pwm_delta").as_int()), 0, 255);
     staged_yaw_tolerance_ = std::max(
       0.01, this->get_parameter("staged_yaw_tolerance").as_double());
     staged_turn_pwm_ = std::clamp(
       static_cast<int>(this->get_parameter("staged_turn_pwm").as_int()), 0, 255);
     turn_ccw_90_radians_ =
       this->get_parameter("turn_ccw_90_degrees").as_double() * M_PI / 180.0;
+    turn_cw_90_radians_ =
+      this->get_parameter("turn_cw_90_degrees").as_double() * M_PI / 180.0;
     turn_ccw_90_yaw_tolerance_ = std::max(
       0.005, this->get_parameter("turn_ccw_90_yaw_tolerance").as_double());
     turn_ccw_90_pwm_ = std::clamp(
       static_cast<int>(this->get_parameter("turn_ccw_90_pwm").as_int()), 0, 255);
-    rc_car_start_position_tolerance_ = std::max(
-      0.03, this->get_parameter("rc_car_start_position_tolerance").as_double());
-    rc_car_start_yaw_tolerance_ = std::max(
-      0.01, this->get_parameter("rc_car_start_yaw_tolerance").as_double());
-    rc_car_start_forward_pwm_ = std::clamp(
-      static_cast<int>(this->get_parameter("rc_car_start_forward_pwm").as_int()), 0, 255);
-    rc_car_start_turn_pwm_ = std::clamp(
-      static_cast<int>(this->get_parameter("rc_car_start_turn_pwm").as_int()), 0, 255);
-    rc_car_start_drive_turn_pwm_delta_ = std::clamp(
-      static_cast<int>(this->get_parameter("rc_car_start_drive_turn_pwm_delta").as_int()), 0, 255);
+    b_stop_align_yaw_ = this->get_parameter("b_stop_align_yaw").as_double();
+    b_stop_align_yaw_tolerance_ = std::max(
+      0.005, this->get_parameter("b_stop_align_yaw_tolerance").as_double());
+    b_stop_align_turn_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("b_stop_align_turn_pwm").as_int()), 0, 255);
+    after_turn_forward_distance_ = std::max(
+      0.0, this->get_parameter("after_turn_forward_distance").as_double());
+    after_turn_forward_tolerance_ = std::max(
+      0.001, this->get_parameter("after_turn_forward_tolerance").as_double());
+    after_turn_forward_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("after_turn_forward_pwm").as_int()), 0, 255);
+    post_aruco_target_x_ = this->get_parameter("post_aruco_target_x").as_double();
+    post_aruco_target_y_ = this->get_parameter("post_aruco_target_y").as_double();
+    post_aruco_target_tolerance_ = std::max(
+      0.02, this->get_parameter("post_aruco_target_tolerance").as_double());
+    post_aruco_target_pwm_ = std::clamp(
+      static_cast<int>(this->get_parameter("post_aruco_target_pwm").as_int()), 0, 255);
     mode_ = this->get_parameter("start_in_follow_mode").as_bool() ?
       FollowerMode::Follow : FollowerMode::Stop;
 
@@ -511,6 +568,9 @@ public:
     encoder_ticks_pub_ =
       this->create_publisher<std_msgs::msg::Int64MultiArray>(encoder_ticks_topic, 10);
     serial_debug_pub_ = this->create_publisher<std_msgs::msg::String>(serial_debug_topic, 10);
+    slot_status_pub_ = this->create_publisher<std_msgs::msg::String>(
+      this->get_parameter("slot_wait_status_topic").as_string(),
+      10);
 
     try_open_serial_port();
 
@@ -539,6 +599,17 @@ public:
           try_open_serial_port();
         }
       });
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "RC follower profile=%s b_profile=%s b_turn_assist=%s radius=%.2f progress=[%.2f, %.2f] lateral=%.2f",
+      profile_.c_str(),
+      b_profile_enabled() ? "true" : "false",
+      enable_b_turn_assist_ ? "true" : "false",
+      b_turn_assist_radius_,
+      b_turn_assist_min_progress_,
+      b_turn_assist_max_progress_,
+      b_turn_assist_lateral_tolerance_);
   }
 
   ~RcCarFollowerNode() override
@@ -653,21 +724,31 @@ private:
     if (mode == "follow") {
       mode_ = FollowerMode::Follow;
       turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
+      post_aruco_target_completed_ = false;
       if (previous_mode != mode_) {
         follow_mode_started_at_ = this->now();
       }
-    } else if (mode == "return") {
-      mode_ = FollowerMode::Return;
-      turn_ccw_90_completed_ = false;
-      clear_intersection_1_left_turn();
     } else if (mode == "align") {
       mode_ = FollowerMode::Align;
       turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
+      post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
+      clear_b_straight_latch();
     } else if (mode == "turn_prepare_left") {
       mode_ = FollowerMode::TurnPrepareLeft;
       turn_ccw_90_completed_ = false;
+      turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
+      post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
+      clear_b_straight_latch();
     } else if (mode == "turn_ccw_90") {
       if (turn_ccw_90_completed_) {
         mode_ = FollowerMode::Stop;
@@ -683,24 +764,75 @@ private:
           normalize_angle(follower_pose_.value().yaw + std::abs(turn_ccw_90_radians_));
       }
       mode_ = FollowerMode::TurnCcw90;
+      publish_slot_status("turn_ccw_90_started");
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       clear_intersection_1_left_turn();
-    } else if (mode == "rc_car_start") {
-      mode_ = FollowerMode::RcCarStart;
-      turn_ccw_90_completed_ = false;
-      rc_car_start_state_ = RcCarStartState::TurnCcw90;
-      if (follower_pose_.has_value()) {
-        rc_car_start_turn_target_yaw_ =
-          normalize_angle(follower_pose_.value().yaw + std::abs(turn_ccw_90_radians_));
-      } else {
-        rc_car_start_turn_target_yaw_.reset();
+      clear_b_straight_latch();
+    } else if (mode == "turn_cw_90") {
+      if (turn_cw_90_completed_) {
+        mode_ = FollowerMode::Stop;
+        turn_cw_90_target_yaw_.reset();
+        send_pwm_command(PwmCommand{0, 0});
+        return;
       }
+      if (mode_ == FollowerMode::TurnCw90 && turn_cw_90_target_yaw_.has_value()) {
+        return;
+      }
+      if (follower_pose_.has_value()) {
+        turn_cw_90_target_yaw_ =
+          normalize_angle(follower_pose_.value().yaw - std::abs(turn_cw_90_radians_));
+      }
+      mode_ = FollowerMode::TurnCw90;
+      publish_slot_status("turn_cw_90_started");
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
       clear_intersection_1_left_turn();
+      clear_b_straight_latch();
+    } else if (mode == "align_b_stop_yaw") {
+      mode_ = FollowerMode::AlignBStopYaw;
+      publish_slot_status("b_stop_align_started");
+      clear_intersection_1_left_turn();
+      clear_b_straight_latch();
+    } else if (mode == "drive_forward_2cm") {
+      if (after_turn_forward_completed_) {
+        mode_ = FollowerMode::Stop;
+        after_turn_forward_start_pose_.reset();
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+      if (mode_ == FollowerMode::DriveForward2cm && after_turn_forward_start_pose_.has_value()) {
+        return;
+      }
+      if (follower_pose_.has_value()) {
+        after_turn_forward_start_pose_ = follower_pose_.value();
+      }
+      mode_ = FollowerMode::DriveForward2cm;
+      publish_slot_status("drive_forward_2cm_started");
+      clear_intersection_1_left_turn();
+      clear_b_straight_latch();
+    } else if (mode == "drive_to_post_aruco_target") {
+      if (post_aruco_target_completed_) {
+        mode_ = FollowerMode::Stop;
+        send_pwm_command(PwmCommand{0, 0});
+        return;
+      }
+      if (mode_ == FollowerMode::DriveToPostArucoTarget) {
+        return;
+      }
+      mode_ = FollowerMode::DriveToPostArucoTarget;
+      publish_slot_status("post_aruco_target_started");
+      clear_intersection_1_left_turn();
+      clear_b_straight_latch();
     } else {
       mode_ = FollowerMode::Stop;
       turn_ccw_90_completed_ = false;
-      rc_car_start_state_ = RcCarStartState::Inactive;
-      rc_car_start_turn_target_yaw_.reset();
+      turn_cw_90_completed_ = false;
+      after_turn_forward_completed_ = false;
+      after_turn_forward_start_pose_.reset();
+      post_aruco_target_completed_ = false;
       clear_intersection_1_left_turn();
+      clear_b_straight_latch();
       send_pwm_command(PwmCommand{0, 0});
     }
 
@@ -716,7 +848,13 @@ private:
       return;
     }
 
-    if (mode_ == FollowerMode::TurnCcw90 || mode_ == FollowerMode::RcCarStart) {
+    if (
+      mode_ == FollowerMode::TurnCcw90 ||
+      mode_ == FollowerMode::TurnCw90 ||
+      mode_ == FollowerMode::AlignBStopYaw ||
+      mode_ == FollowerMode::DriveForward2cm ||
+      mode_ == FollowerMode::DriveToPostArucoTarget)
+    {
       if (!follower_pose_is_fresh()) {
         RCLCPP_WARN_THROTTLE(
           this->get_logger(),
@@ -751,6 +889,9 @@ private:
     if (mode_ == FollowerMode::TurnCcw90 && !turn_ccw_90_target_yaw_.has_value()) {
       turn_ccw_90_target_yaw_ = normalize_angle(follower.yaw + std::abs(turn_ccw_90_radians_));
     }
+    if (mode_ == FollowerMode::TurnCw90 && !turn_cw_90_target_yaw_.has_value()) {
+      turn_cw_90_target_yaw_ = normalize_angle(follower.yaw - std::abs(turn_cw_90_radians_));
+    }
 
     if (
       publish_encoder_odom_ &&
@@ -771,15 +912,41 @@ private:
       send_pwm_command(command);
       return;
     }
-
-    if (mode_ == FollowerMode::RcCarStart) {
-      const PwmCommand command = make_rc_car_start_command(follower);
+    if (mode_ == FollowerMode::TurnCw90) {
+      const PwmCommand command = make_turn_cw_90_command(follower);
+      send_pwm_command(command);
+      return;
+    }
+    if (mode_ == FollowerMode::AlignBStopYaw) {
+      const PwmCommand command = make_b_stop_align_command(follower);
+      send_pwm_command(command);
+      return;
+    }
+    if (mode_ == FollowerMode::DriveForward2cm) {
+      const PwmCommand command = make_after_turn_forward_command(follower);
+      send_pwm_command(command);
+      return;
+    }
+    if (mode_ == FollowerMode::DriveToPostArucoTarget) {
+      const PwmCommand command = make_drive_to_post_aruco_target_command(follower);
       send_pwm_command(apply_drive_duty(command));
       return;
     }
 
-    if (mode_ == FollowerMode::Follow && should_assist_intersection_1_turn(follower)) {
+    if (
+      mode_ == FollowerMode::Follow &&
+      !b_profile_enabled() &&
+      should_assist_intersection_1_turn(follower))
+    {
       const PwmCommand command = make_intersection_1_turn_assist_command(follower);
+      send_pwm_command(apply_drive_duty(command));
+      return;
+    }
+
+    const bool b_straight_latched = update_b_straight_latch(follower);
+
+    if (!b_straight_latched && mode_ == FollowerMode::Follow && should_assist_b_turn(follower)) {
+      const PwmCommand command = make_b_turn_assist_command(follower);
       send_pwm_command(apply_drive_duty(command));
       return;
     }
@@ -797,16 +964,11 @@ private:
     PwmCommand command;
     if (mode_ == FollowerMode::Align) {
       command = make_align_command(heading_error);
-    } else if (mode_ == FollowerMode::Return) {
-      const double return_dx = leader.x - follower.x;
-      const double return_dy = leader.y - follower.y;
-      const double return_distance = std::hypot(return_dx, return_dy);
-      const double return_heading_error =
-        normalize_angle(std::atan2(return_dy, return_dx) - follower.yaw);
-      command = make_return_command(return_distance, return_heading_error);
     } else if (mode_ == FollowerMode::TurnPrepareLeft) {
       command = make_path_follow_command(
         distance, leader_distance, heading_error, target_yaw_error);
+    } else if (b_straight_latched) {
+      command = make_b_straight_follow_command(distance, leader_distance, follower);
     } else {
       command = make_path_follow_command(
         distance, leader_distance, heading_error, target_yaw_error);
@@ -965,6 +1127,14 @@ private:
     std_msgs::msg::String msg;
     msg.data = line;
     serial_debug_pub_->publish(msg);
+  }
+
+  void publish_slot_status(const std::string & status)
+  {
+    std_msgs::msg::String msg;
+    msg.data = status;
+    slot_status_pub_->publish(msg);
+    RCLCPP_INFO(this->get_logger(), "RC car slot status: %s", status.c_str());
   }
 
   bool parse_tick_line(const std::string & line, long & left_ticks, long & right_ticks) const
@@ -1297,13 +1467,60 @@ private:
     return apply_turn_to_pwm(calculate_forward_pwm(leader_distance - target_distance_), turn_error);
   }
 
-  bool progress_from_intersection_1_to_a_entry(
+  PwmCommand make_b_straight_follow_command(
+    double path_target_distance,
+    double leader_distance,
+    const Pose2D & follower) const
+  {
+    const double straight_yaw = b_entry_to_leader_slot_yaw();
+    double turn_error = normalize_angle(straight_yaw - follower.yaw);
+    if (std::abs(turn_error) <= b_straight_heading_deadband_) {
+      turn_error = 0.0;
+    }
+
+    const auto apply_straight_turn = [this, turn_error](int forward_pwm) {
+        return apply_turn_to_pwm(forward_pwm, turn_error, b_straight_turn_pwm_delta_);
+      };
+
+    if (leader_distance < too_close_distance_) {
+      if (leader_distance <= emergency_stop_distance_) {
+        return PwmCommand{0, 0};
+      }
+      return apply_straight_turn(slow_forward_pwm_);
+    }
+
+    if (leader_distance < target_distance_ - distance_deadband_) {
+      return apply_straight_turn(slow_forward_pwm_);
+    }
+
+    if (path_target_distance <= leader_path_goal_tolerance_) {
+      return apply_straight_turn(slow_forward_pwm_);
+    }
+
+    return apply_straight_turn(calculate_forward_pwm(leader_distance - target_distance_));
+  }
+
+  bool profile_is(const char * name) const
+  {
+    return profile_ == name;
+  }
+
+  bool b_profile_enabled() const
+  {
+    return profile_is("b") || profile_is("B") || profile_is("b_slot") || profile_is("B_slot");
+  }
+
+  bool progress_along_segment(
     const Pose2D & follower,
+    double start_x,
+    double start_y,
+    double end_x,
+    double end_y,
     double & progress,
     double & lateral_error) const
   {
-    const double sx = a_entry_x_ - intersection_1_x_;
-    const double sy = a_entry_y_ - intersection_1_y_;
+    const double sx = end_x - start_x;
+    const double sy = end_y - start_y;
     const double segment_length = std::hypot(sx, sy);
     if (segment_length <= 1e-6) {
       progress = 0.0;
@@ -1311,16 +1528,36 @@ private:
       return false;
     }
 
-    const double fx = follower.x - intersection_1_x_;
-    const double fy = follower.y - intersection_1_y_;
+    const double fx = follower.x - start_x;
+    const double fy = follower.y - start_y;
     progress = (fx * sx + fy * sy) / (segment_length * segment_length);
     lateral_error = std::abs(fx * sy - fy * sx) / segment_length;
     return true;
   }
 
+  bool progress_from_intersection_1_to_a_entry(
+    const Pose2D & follower,
+    double & progress,
+    double & lateral_error) const
+  {
+    return progress_along_segment(
+      follower,
+      intersection_1_x_,
+      intersection_1_y_,
+      a_entry_x_,
+      a_entry_y_,
+      progress,
+      lateral_error);
+  }
+
   double intersection_1_to_a_entry_yaw() const
   {
     return std::atan2(a_entry_y_ - intersection_1_y_, a_entry_x_ - intersection_1_x_);
+  }
+
+  double b_entry_to_leader_slot_yaw() const
+  {
+    return std::atan2(b_leader_slot_y_ - b_entry_y_, b_leader_slot_x_ - b_entry_x_);
   }
 
   bool should_assist_intersection_1_turn(const Pose2D & follower) const
@@ -1370,6 +1607,142 @@ private:
     return make_staged_turn_command(heading_error);
   }
 
+  bool update_b_straight_latch(const Pose2D & follower)
+  {
+    if (mode_ != FollowerMode::Follow || !b_profile_enabled() || !enable_b_straight_latch_) {
+      clear_b_straight_latch();
+      return false;
+    }
+
+    if (b_straight_latched_) {
+      return true;
+    }
+
+    double progress = 0.0;
+    double lateral_error = 0.0;
+    if (!progress_along_segment(
+        follower,
+        b_entry_x_,
+        b_entry_y_,
+        b_leader_slot_x_,
+        b_leader_slot_y_,
+        progress,
+        lateral_error))
+    {
+      return false;
+    }
+
+    if (
+      progress < b_straight_latch_min_progress_ ||
+      progress > b_straight_latch_max_progress_ ||
+      lateral_error > b_straight_latch_lateral_tolerance_)
+    {
+      return false;
+    }
+
+    b_straight_latched_ = true;
+    RCLCPP_INFO(
+      this->get_logger(),
+      "B straight follow latch enabled: progress=%.2f lateral=%.3f yaw=%.2f",
+      progress,
+      lateral_error,
+      b_entry_to_leader_slot_yaw());
+    return true;
+  }
+
+  bool should_assist_b_turn(const Pose2D & follower) const
+  {
+    if (!b_profile_enabled() || !enable_b_turn_assist_) {
+      return false;
+    }
+
+    double target_yaw = 0.0;
+    double progress = 0.0;
+    double lateral_error = 0.0;
+    if (!select_b_turn_assist_target(follower, target_yaw, progress, lateral_error)) {
+      return false;
+    }
+
+    const double heading_error = normalize_angle(target_yaw - follower.yaw);
+    return std::abs(heading_error) > b_turn_assist_yaw_tolerance_;
+  }
+
+  PwmCommand make_b_turn_assist_command(const Pose2D & follower)
+  {
+    double target_yaw = 0.0;
+    double progress = 0.0;
+    double lateral_error = 0.0;
+    (void)select_b_turn_assist_target(follower, target_yaw, progress, lateral_error);
+    const double heading_error = normalize_angle(target_yaw - follower.yaw);
+
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Assisting B profile turn: yaw_error=%.2f progress=%.2f lateral=%.3f",
+      heading_error,
+      progress,
+      lateral_error);
+    return make_staged_turn_command(heading_error);
+  }
+
+  bool select_b_turn_assist_target(
+    const Pose2D & follower,
+    double & target_yaw,
+    double & progress,
+    double & lateral_error) const
+  {
+    if (b_turn_segment_matches(
+        follower,
+        intersection_2_x_,
+        intersection_2_y_,
+        b_entry_x_,
+        b_entry_y_,
+        target_yaw,
+        progress,
+        lateral_error))
+    {
+      return true;
+    }
+
+    return b_turn_segment_matches(
+      follower,
+      b_entry_x_,
+      b_entry_y_,
+      b_leader_slot_x_,
+      b_leader_slot_y_,
+      target_yaw,
+      progress,
+      lateral_error);
+  }
+
+  bool b_turn_segment_matches(
+    const Pose2D & follower,
+    double start_x,
+    double start_y,
+    double end_x,
+    double end_y,
+    double & target_yaw,
+    double & progress,
+    double & lateral_error) const
+  {
+    if (!progress_along_segment(follower, start_x, start_y, end_x, end_y, progress, lateral_error)) {
+      return false;
+    }
+    if (progress < b_turn_assist_min_progress_ || progress > b_turn_assist_max_progress_) {
+      return false;
+    }
+    if (lateral_error > b_turn_assist_lateral_tolerance_) {
+      return false;
+    }
+    if (distance_to_target(follower, start_x, start_y) > b_turn_assist_radius_) {
+      return false;
+    }
+
+    target_yaw = std::atan2(end_y - start_y, end_x - start_x);
+    return true;
+  }
+
   double distance_to_target(const Pose2D & follower, double target_x, double target_y) const
   {
     return std::hypot(target_x - follower.x, target_y - follower.y);
@@ -1398,6 +1771,7 @@ private:
       mode_ = FollowerMode::Stop;
       turn_ccw_90_target_yaw_.reset();
       turn_ccw_90_completed_ = true;
+      publish_slot_status("turn_ccw_90_done");
       return PwmCommand{0, 0};
     }
 
@@ -1407,98 +1781,112 @@ private:
     return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
   }
 
-  PwmCommand make_rc_car_start_turn_command(double heading_error) const
+  PwmCommand make_turn_cw_90_command(const Pose2D & follower)
   {
-    if (std::abs(heading_error) <= rc_car_start_yaw_tolerance_) {
+    if (!turn_cw_90_target_yaw_.has_value()) {
       return PwmCommand{0, 0};
     }
+
+    const double heading_error =
+      normalize_angle(turn_cw_90_target_yaw_.value() - follower.yaw);
+    if (std::abs(heading_error) <= turn_ccw_90_yaw_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      turn_cw_90_target_yaw_.reset();
+      turn_cw_90_completed_ = true;
+      publish_slot_status("turn_cw_90_done");
+      return PwmCommand{0, 0};
+    }
+
     if (heading_error > 0.0) {
-      return PwmCommand{-rc_car_start_turn_pwm_, rc_car_start_turn_pwm_};
+      return PwmCommand{-turn_ccw_90_pwm_, turn_ccw_90_pwm_};
     }
-    return PwmCommand{rc_car_start_turn_pwm_, -rc_car_start_turn_pwm_};
+    return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
   }
 
-  void transition_rc_car_start(RcCarStartState next_state)
+  PwmCommand make_b_stop_align_command(const Pose2D & follower)
   {
-    if (rc_car_start_state_ == next_state) {
-      return;
-    }
-    rc_car_start_state_ = next_state;
-    RCLCPP_INFO(this->get_logger(), "RC car start state: %d", static_cast<int>(next_state));
-  }
-
-  PwmCommand make_rc_car_start_command(const Pose2D & follower)
-  {
-    switch (rc_car_start_state_) {
-      case RcCarStartState::Inactive:
-        transition_rc_car_start(RcCarStartState::TurnCcw90);
-        return PwmCommand{0, 0};
-      case RcCarStartState::TurnCcw90: {
-          if (!rc_car_start_turn_target_yaw_.has_value()) {
-            rc_car_start_turn_target_yaw_ =
-              normalize_angle(follower.yaw + std::abs(turn_ccw_90_radians_));
-          }
-          const double heading_error =
-            normalize_angle(rc_car_start_turn_target_yaw_.value() - follower.yaw);
-          if (std::abs(heading_error) <= turn_ccw_90_yaw_tolerance_) {
-            rc_car_start_turn_target_yaw_.reset();
-            transition_rc_car_start(RcCarStartState::RotateToStart);
-            return PwmCommand{0, 0};
-          }
-          if (heading_error > 0.0) {
-            return PwmCommand{-turn_ccw_90_pwm_, turn_ccw_90_pwm_};
-          }
-          return PwmCommand{turn_ccw_90_pwm_, -turn_ccw_90_pwm_};
-        }
-      case RcCarStartState::RotateToStart: {
-          const double target_heading =
-            std::atan2(initial_rc_y_ - follower.y, initial_rc_x_ - follower.x);
-          const double heading_error = normalize_angle(target_heading - follower.yaw);
-          if (std::abs(heading_error) <= rc_car_start_yaw_tolerance_) {
-            transition_rc_car_start(RcCarStartState::DriveToStart);
-            return PwmCommand{0, 0};
-          }
-          return make_rc_car_start_turn_command(heading_error);
-        }
-      case RcCarStartState::DriveToStart: {
-          const double distance = distance_to_target(follower, initial_rc_x_, initial_rc_y_);
-          if (distance <= rc_car_start_position_tolerance_) {
-            transition_rc_car_start(RcCarStartState::AlignStartYaw);
-            return PwmCommand{0, 0};
-          }
-          const double target_heading =
-            std::atan2(initial_rc_y_ - follower.y, initial_rc_x_ - follower.x);
-          const double heading_error = normalize_angle(target_heading - follower.yaw);
-          if (std::abs(heading_error) > rc_car_start_yaw_tolerance_) {
-            return make_rc_car_start_turn_command(heading_error);
-          }
-          return apply_turn_to_pwm(
-            rc_car_start_forward_pwm_,
-            heading_error,
-            rc_car_start_drive_turn_pwm_delta_);
-        }
-      case RcCarStartState::AlignStartYaw: {
-          const double heading_error = normalize_angle(initial_rc_yaw_ - follower.yaw);
-          if (std::abs(heading_error) <= rc_car_start_yaw_tolerance_) {
-            transition_rc_car_start(RcCarStartState::Complete);
-            return PwmCommand{0, 0};
-          }
-          return make_rc_car_start_turn_command(heading_error);
-        }
-      case RcCarStartState::Complete:
-        mode_ = FollowerMode::Stop;
-        rc_car_start_state_ = RcCarStartState::Inactive;
-        return PwmCommand{0, 0};
-    }
-    return PwmCommand{0, 0};
-  }
-
-  PwmCommand make_return_command(double distance, double heading_error) const
-  {
-    if (distance <= target_distance_) {
+    const double heading_error = normalize_angle(b_stop_align_yaw_ - follower.yaw);
+    if (std::abs(heading_error) <= b_stop_align_yaw_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      publish_slot_status("b_stop_align_done");
       return PwmCommand{0, 0};
     }
-    return apply_turn_to_pwm(calculate_forward_pwm(distance - target_distance_), heading_error);
+
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Aligning RC car at B stop: yaw_error=%.2f target_yaw=%.2f",
+      heading_error,
+      b_stop_align_yaw_);
+    if (heading_error > 0.0) {
+      return PwmCommand{-b_stop_align_turn_pwm_, b_stop_align_turn_pwm_};
+    }
+    return PwmCommand{b_stop_align_turn_pwm_, -b_stop_align_turn_pwm_};
+  }
+
+  PwmCommand make_after_turn_forward_command(const Pose2D & follower)
+  {
+    if (!after_turn_forward_start_pose_.has_value()) {
+      after_turn_forward_start_pose_ = follower;
+    }
+
+    const auto start = after_turn_forward_start_pose_.value();
+    const double dx = follower.x - start.x;
+    const double dy = follower.y - start.y;
+    const double progress = dx * std::cos(start.yaw) + dy * std::sin(start.yaw);
+    const double remaining = after_turn_forward_distance_ - progress;
+    if (remaining <= after_turn_forward_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      after_turn_forward_completed_ = true;
+      after_turn_forward_start_pose_.reset();
+      publish_slot_status("drive_forward_2cm_done");
+      return PwmCommand{0, 0};
+    }
+
+    const double heading_error = normalize_angle(start.yaw - follower.yaw);
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Driving RC car forward after turn: progress=%.3f remaining=%.3f heading_error=%.2f",
+      progress,
+      remaining,
+      heading_error);
+
+    return apply_turn_to_pwm(after_turn_forward_pwm_, heading_error, near_turn_pwm_delta_);
+  }
+
+  PwmCommand make_drive_to_post_aruco_target_command(const Pose2D & follower)
+  {
+    const double dx = post_aruco_target_x_ - follower.x;
+    const double dy = post_aruco_target_y_ - follower.y;
+    const double distance = std::hypot(dx, dy);
+    if (distance <= post_aruco_target_tolerance_) {
+      mode_ = FollowerMode::Stop;
+      post_aruco_target_completed_ = true;
+      publish_slot_status("post_aruco_target_arrived");
+      return PwmCommand{0, 0};
+    }
+
+    const double target_heading = std::atan2(dy, dx);
+    const double heading_error = normalize_angle(target_heading - follower.yaw);
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Driving RC car to post ArUco target: distance=%.3f heading_error=%.2f",
+      distance,
+      heading_error);
+
+    if (std::abs(heading_error) > 0.55) {
+      return make_staged_turn_command(heading_error);
+    }
+
+    const int forward_pwm = distance < 0.25 ?
+      std::min(post_aruco_target_pwm_, slow_forward_pwm_) :
+      post_aruco_target_pwm_;
+    return apply_turn_to_pwm(forward_pwm, heading_error, near_turn_pwm_delta_);
   }
 
   int calculate_forward_pwm(double distance_error) const
@@ -1612,6 +2000,11 @@ private:
     intersection_1_left_turn_active_ = false;
   }
 
+  void clear_b_straight_latch()
+  {
+    b_straight_latched_ = false;
+  }
+
   PwmCommand make_align_command(double heading_error) const
   {
     if (std::abs(heading_error) <= heading_deadband_) {
@@ -1678,6 +2071,7 @@ private:
   FollowerMode mode_{FollowerMode::Stop};
 
   std::string arduino_port_{"auto"};
+  std::string profile_{"a"};
   int arduino_baud_rate_{115200};
   double target_distance_{0.70};
   double distance_deadband_{0.08};
@@ -1744,17 +2138,41 @@ private:
   double intersection_1_turn_assist_lateral_tolerance_{0.35};
   double a_entry_x_{1.2001334428787231};
   double a_entry_y_{-0.001835942268371582};
+  bool enable_b_turn_assist_{true};
+  double intersection_2_x_{2.478525400161743};
+  double intersection_2_y_{-1.389811635017395};
+  double b_entry_x_{1.209195852279663};
+  double b_entry_y_{-1.3838512897491455};
+  double b_leader_slot_x_{0.01311033871024847};
+  double b_leader_slot_y_{-1.3952621221542358};
+  double b_turn_assist_radius_{1.35};
+  double b_turn_assist_yaw_tolerance_{0.16};
+  double b_turn_assist_min_progress_{-0.25};
+  double b_turn_assist_max_progress_{1.15};
+  double b_turn_assist_lateral_tolerance_{0.75};
+  bool enable_b_straight_latch_{true};
+  double b_straight_latch_min_progress_{0.05};
+  double b_straight_latch_max_progress_{1.25};
+  double b_straight_latch_lateral_tolerance_{0.35};
+  double b_straight_heading_deadband_{0.25};
+  int b_straight_turn_pwm_delta_{8};
+  bool b_straight_latched_{false};
   double staged_yaw_tolerance_{0.12};
   int staged_turn_pwm_{70};
-  double turn_ccw_90_radians_{M_PI / 2.0};
+  double turn_ccw_90_radians_{100.0 * M_PI / 180.0};
+  double turn_cw_90_radians_{140.0 * M_PI / 180.0};
   double turn_ccw_90_yaw_tolerance_{0.08};
   int turn_ccw_90_pwm_{70};
-  double rc_car_start_position_tolerance_{0.20};
-  double rc_car_start_yaw_tolerance_{0.15};
-  int rc_car_start_forward_pwm_{85};
-  int rc_car_start_turn_pwm_{70};
-  int rc_car_start_drive_turn_pwm_delta_{18};
-
+  double b_stop_align_yaw_{M_PI / 2.0};
+  double b_stop_align_yaw_tolerance_{0.08};
+  int b_stop_align_turn_pwm_{70};
+  double after_turn_forward_distance_{0.02};
+  double after_turn_forward_tolerance_{0.005};
+  int after_turn_forward_pwm_{65};
+  double post_aruco_target_x_{2.000904083251953};
+  double post_aruco_target_y_{-0.001956900581717491};
+  double post_aruco_target_tolerance_{0.08};
+  int post_aruco_target_pwm_{85};
   std::optional<Pose2D> leader_pose_;
   std::optional<Pose2D> follower_pose_;
   std::vector<LeaderPoseSample> leader_history_;
@@ -1779,11 +2197,14 @@ private:
   bool intersection_1_left_turn_active_{false};
   bool intersection_1_left_turn_completed_{false};
   bool turn_ccw_90_completed_{false};
+  bool turn_cw_90_completed_{false};
+  bool after_turn_forward_completed_{false};
+  bool post_aruco_target_completed_{false};
   bool encoder_ready_{false};
   bool encoder_startup_settle_logged_{false};
   std::optional<double> turn_ccw_90_target_yaw_;
-  std::optional<double> rc_car_start_turn_target_yaw_;
-  RcCarStartState rc_car_start_state_{RcCarStartState::Inactive};
+  std::optional<double> turn_cw_90_target_yaw_;
+  std::optional<Pose2D> after_turn_forward_start_pose_;
   PwmCommand last_sent_pwm_command_;
   double encoder_balance_trim_pwm_{0.0};
   std::string last_command_;
@@ -1793,6 +2214,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr command_pub_;
   rclcpp::Publisher<std_msgs::msg::Int64MultiArray>::SharedPtr encoder_ticks_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr serial_debug_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr slot_status_pub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr leader_pose_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr leader_cmd_vel_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr follower_odom_sub_;
