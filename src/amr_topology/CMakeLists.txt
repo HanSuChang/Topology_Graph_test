@@ -67,6 +67,30 @@ ament_target_dependencies(
 )
 target_link_libraries(mission_loop yaml-cpp)
 
+add_executable(
+  mission2_loop
+  src/mission2_loop.cpp
+  src/local_astar_pure_pursuit.cpp
+)
+target_compile_features(mission2_loop PUBLIC cxx_std_17)
+target_include_directories(mission2_loop PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(
+  mission2_loop
+  ament_index_cpp
+  geometry_msgs
+  nav_msgs
+  nav2_msgs
+  rclcpp
+  rclcpp_action
+  sensor_msgs
+  std_msgs
+  tf2_ros
+)
+target_link_libraries(mission2_loop yaml-cpp)
+
 add_executable(rc_car_follower_node src/rc_car_follower_node.cpp)
 target_compile_features(rc_car_follower_node PUBLIC cxx_std_17)
 ament_target_dependencies(
@@ -111,10 +135,19 @@ install(TARGETS
   topology_follower
   topology_marker_node
   mission_loop
+  mission2_loop
   rc_car_follower_node
   image_rotate_node
   image_rotate_compress_node
   aruco_marker_detector_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/arm_vision_gripper_node.py
+  scripts/esp32_servo_bridge_node.py
+  scripts/servo_hold_90_node.py
+  scripts/turtle_mission
   DESTINATION lib/${PROJECT_NAME}
 )
 
