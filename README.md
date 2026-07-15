@@ -651,4 +651,4 @@ cd gui_system
 ./scripts/run_bridge.sh
 ```
 
-ROS domain은 bridge 설정 기준 `ROS_DOMAIN_ID=27`입니다.
+ROS domain은 bridge 설정 기준 `ROS_DOMAIN_ID=27`입니다..
